@@ -176,12 +176,32 @@ impl Plugin for PlayerPlugin {
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
                 .with_system(spawn_player.system())
+                .with_system(debug_text.system())
                 .with_system(spawn_camera.system()),
         )
         .add_system_set(SystemSet::on_update(GameState::Playing).with_system(move_player.system()));
     }
 }
-
+fn debug_text(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn_bundle(TextBundle {
+        style: Style {
+            align_self: AlignSelf::FlexEnd,
+            ..Default::default()
+        },
+        text: Text {
+            sections: vec![TextSection {
+                value: "hello bevy".to_string(),
+                style: TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 12.0,
+                    color: Color::WHITE,
+                },
+            }],
+            ..Default::default()
+        },
+        ..Default::default()
+    });
+}
 fn spawn_camera(mut commands: Commands) {
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_xyz(-2.0, 2.5, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -216,7 +236,7 @@ fn spawn_player(
 fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,
-    mut player_query: Query<(&mut Transform, &Water, &Mesh), With<Player>>,
+    mut player_query: Query<(&mut Transform, &Water), With<Player>>,
 ) {
     if actions.player_movement.is_none() {
         return;
@@ -227,7 +247,7 @@ fn move_player(
         actions.player_movement.unwrap().y * speed * time.delta_seconds(),
         0.,
     );
-    for (mut player_transform, _, _) in player_query.iter_mut() {
+    for (mut player_transform, _) in player_query.iter_mut() {
         player_transform.translation += movement;
     }
 }
