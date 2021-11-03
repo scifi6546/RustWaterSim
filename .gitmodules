@@ -1,0 +1,3 @@
+[submodule "smooth-bevy-cameras"]
+	path = smooth-bevy-cameras
+	url = https://github.com/bonsairobo/smooth-bevy-cameras.git
