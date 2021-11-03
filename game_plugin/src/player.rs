@@ -216,7 +216,7 @@ fn spawn_player(
 fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,
-    mut player_query: Query<&mut Transform, With<Player>>,
+    mut player_query: Query<(&mut Transform, &Water, &Mesh), With<Player>>,
 ) {
     if actions.player_movement.is_none() {
         return;
@@ -227,7 +227,7 @@ fn move_player(
         actions.player_movement.unwrap().y * speed * time.delta_seconds(),
         0.,
     );
-    for mut player_transform in player_query.iter_mut() {
+    for (mut player_transform, _, _) in player_query.iter_mut() {
         player_transform.translation += movement;
     }
 }
