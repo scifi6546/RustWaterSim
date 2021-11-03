@@ -1,5 +1,4 @@
 use crate::actions::Actions;
-use crate::loading::TextureAssets;
 use crate::GameState;
 use bevy::{
     prelude::*,
@@ -42,7 +41,6 @@ impl Water {
     /// Builds mesh from grid, todo: make water sim inplace for performance reasons
     pub fn build_mesh(&self) -> Mesh {
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        let mut vertices = vec![];
         let mut position = vec![];
         let mut normals = vec![];
         let mut uvs = vec![];
@@ -87,73 +85,6 @@ impl Water {
                 position.push([x0_y1.x, x0_y1.y, x0_y1.z]);
                 normals.push([triangle1_normal.x, triangle1_normal.y, triangle1_normal.z]);
                 uvs.push([0.0, 1.0]);
-
-                vertices.append(&mut vec![
-                    //uv
-                    0.0,
-                    0.0,
-                    //normal
-                    triangle0_normal.x,
-                    triangle0_normal.y,
-                    triangle0_normal.z,
-                    //position:
-                    x0_y1.x,
-                    x0_y1.y,
-                    x0_y1.z,
-                    //uv
-                    0.0,
-                    1.0,
-                    //normal
-                    triangle0_normal.x,
-                    triangle0_normal.y,
-                    triangle0_normal.z,
-                    //position:
-                    x1_y0.x,
-                    x1_y0.y,
-                    x1_y0.z,
-                    //uv
-                    1.0,
-                    0.0,
-                    //normal
-                    triangle0_normal.x,
-                    triangle0_normal.y,
-                    triangle0_normal.z,
-                    //triangle 1
-
-                    //position:
-                    x0_y1.x,
-                    x0_y1.y,
-                    x0_y1.z,
-                    //uv
-                    0.0,
-                    1.0,
-                    //normal
-                    triangle1_normal.x,
-                    triangle1_normal.y,
-                    triangle1_normal.z,
-                    //position:
-                    x1_y1.x,
-                    x1_y1.y,
-                    x1_y1.z,
-                    //uv
-                    1.0,
-                    1.0,
-                    //normal
-                    triangle1_normal.x,
-                    triangle1_normal.y,
-                    triangle1_normal.z,
-                    //position:
-                    x1_y0.x,
-                    x1_y0.y,
-                    x1_y0.z,
-                    //uv
-                    1.0,
-                    0.0,
-                    //normal
-                    triangle1_normal.x,
-                    triangle1_normal.y,
-                    triangle1_normal.z,
-                ]);
             }
         }
         println!("pos length: {}", position.len());
@@ -162,10 +93,10 @@ impl Water {
         let indicies = (0..position.len()).map(|i| i as u32).collect();
         mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, position);
         mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs.clone());
         mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
         mesh.set_indices(Some(Indices::U32(indicies)));
         return mesh;
-        todo!()
     }
 }
 
@@ -191,7 +122,6 @@ fn spawn_camera(mut commands: Commands) {
 
 fn spawn_player(
     mut commands: Commands,
-    textures: Res<TextureAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
