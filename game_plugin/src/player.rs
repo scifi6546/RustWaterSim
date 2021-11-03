@@ -40,21 +40,10 @@ fn debug_text(mut commands: Commands, asset_server: Res<AssetServer>) {
         ..Default::default()
     });
 }
-<<<<<<< HEAD
 
-fn spawn_player(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let water = Water::new();
-    let mut transform = Transform::from_translation(Vec3::new(0.3, 0.5, 0.3));
-    transform.scale = Vec3::new(0.1, 0.1, 0.1);
-=======
 fn spawn_camera(mut commands: Commands) {
     let eye = Vec3::new(-2.0, 2.5, 5.0);
     let target = Vec3::ZERO;
->>>>>>> 97faa976935312d75a0f20bcaf716c6743ce53ad
     commands
         .spawn_bundle(OrbitCameraBundle::new(
             OrbitCameraController::default(),
