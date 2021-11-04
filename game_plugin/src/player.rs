@@ -14,35 +14,15 @@ impl Plugin for PlayerPlugin {
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
                 .with_system(spawn_player.system())
-                .with_system(debug_text.system())
                 .with_system(spawn_camera.system()),
         )
         .add_system_set(SystemSet::on_update(GameState::Playing).with_system(move_player.system()));
     }
 }
-fn debug_text(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn_bundle(TextBundle {
-        style: Style {
-            align_self: AlignSelf::FlexEnd,
-            ..Default::default()
-        },
-        text: Text {
-            sections: vec![TextSection {
-                value: "hello bevy".to_string(),
-                style: TextStyle {
-                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                    font_size: 12.0,
-                    color: Color::WHITE,
-                },
-            }],
-            ..Default::default()
-        },
-        ..Default::default()
-    });
-}
 
 fn spawn_camera(mut commands: Commands) {
     let eye = Vec3::new(-2.0, 2.5, 5.0);
+    let target = Vec3::new(50.0, 0.0, 5.0);
     let target = Vec3::ZERO;
     commands
         .spawn_bundle(OrbitCameraBundle::new(

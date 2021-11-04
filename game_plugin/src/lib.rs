@@ -1,5 +1,6 @@
 mod actions;
 mod audio;
+mod game_menu;
 mod loading;
 mod menu;
 mod player;
@@ -13,6 +14,7 @@ use bevy::app::AppBuilder;
 #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
+use game_menu::GameMenuPlugin;
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
 
@@ -41,6 +43,7 @@ impl Plugin for GamePlugin {
             .add_plugin(LookTransformPlugin)
             .add_plugin(OrbitCameraPlugin)
             .add_plugin(WaterPlugin)
+            .add_plugin(GameMenuPlugin)
             .add_plugin(PlayerPlugin);
 
         #[cfg(debug_assertions)]

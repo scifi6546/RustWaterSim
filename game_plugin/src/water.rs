@@ -57,6 +57,8 @@ pub struct Water {
     /// water velocity
     velocity: Grid<Vector2<f32>>,
     dimensions: Vector2<usize>,
+    /// viscosity
+    viscosity: f32,
 }
 impl Water {
     /// Time step
@@ -64,7 +66,7 @@ impl Water {
     /// Gravity constant
     const G: f32 = 0.1;
     /// Viscosity
-    const VISC: f32 = 0.0002;
+    const HEIGHT_MULTIPLIER: f32 = 100.0;
     pub fn new() -> Self {
         let mut heights_point = vec![0.0; 100 * 100];
         heights_point[50 * 100 + 50] = 0.1;
@@ -79,22 +81,33 @@ impl Water {
                 vec![Vector2::new(0.0, 0.0); 101 * 101],
             ),
             dimensions: Vector2::new(100, 100),
+            viscosity: 0.002,
         }
     }
     pub fn update_mesh(&self, mesh: &mut Mesh) {
-        let mut vertices = vec![];
         let mut position = vec![];
         let mut normals = vec![];
         let mut uvs = vec![];
         for x in 0..self.heights.x() - 1 {
             for y in 0..self.heights.y() - 1 {
-                let x0_y0 = Vector3::new(x as f32, self.heights.get(x, y) as f32, y as f32);
-                let x0_y1 =
-                    Vector3::new(x as f32, self.heights.get(x, y + 1) as f32, y as f32 + 1.0);
-                let x1_y0 = Vector3::new(x as f32 + 1.0, self.heights.get(x + 1, y), y as f32);
+                let x0_y0 = Vector3::new(
+                    x as f32,
+                    self.heights.get(x, y) as f32 * Self::HEIGHT_MULTIPLIER,
+                    y as f32,
+                );
+                let x0_y1 = Vector3::new(
+                    x as f32,
+                    self.heights.get(x, y + 1) as f32 * Self::HEIGHT_MULTIPLIER,
+                    y as f32 + 1.0,
+                );
+                let x1_y0 = Vector3::new(
+                    x as f32 + 1.0,
+                    self.heights.get(x + 1, y) * Self::HEIGHT_MULTIPLIER,
+                    y as f32,
+                );
                 let x1_y1 = Vector3::new(
                     x as f32 + 1.0,
-                    self.heights.get(x + 1, y + 1) as f32,
+                    self.heights.get(x + 1, y + 1) as f32 * Self::HEIGHT_MULTIPLIER,
                     y as f32 + 1.0,
                 );
                 let triangle0_normal = (x0_y1 - x0_y0).cross(&(x1_y0 - x0_y0)).normalize();
@@ -128,73 +141,6 @@ impl Water {
                 position.push([x0_y1.x, x0_y1.y, x0_y1.z]);
                 normals.push([triangle1_normal.x, triangle1_normal.y, triangle1_normal.z]);
                 uvs.push([0.0, 1.0]);
-
-                vertices.append(&mut vec![
-                    //uv
-                    0.0,
-                    0.0,
-                    //normal
-                    triangle0_normal.x,
-                    triangle0_normal.y,
-                    triangle0_normal.z,
-                    //position:
-                    x0_y1.x,
-                    x0_y1.y,
-                    x0_y1.z,
-                    //uv
-                    0.0,
-                    1.0,
-                    //normal
-                    triangle0_normal.x,
-                    triangle0_normal.y,
-                    triangle0_normal.z,
-                    //position:
-                    x1_y0.x,
-                    x1_y0.y,
-                    x1_y0.z,
-                    //uv
-                    1.0,
-                    0.0,
-                    //normal
-                    triangle0_normal.x,
-                    triangle0_normal.y,
-                    triangle0_normal.z,
-                    //triangle 1
-
-                    //position:
-                    x0_y1.x,
-                    x0_y1.y,
-                    x0_y1.z,
-                    //uv
-                    0.0,
-                    1.0,
-                    //normal
-                    triangle1_normal.x,
-                    triangle1_normal.y,
-                    triangle1_normal.z,
-                    //position:
-                    x1_y1.x,
-                    x1_y1.y,
-                    x1_y1.z,
-                    //uv
-                    1.0,
-                    1.0,
-                    //normal
-                    triangle1_normal.x,
-                    triangle1_normal.y,
-                    triangle1_normal.z,
-                    //position:
-                    x1_y0.x,
-                    x1_y0.y,
-                    x1_y0.z,
-                    //uv
-                    1.0,
-                    0.0,
-                    //normal
-                    triangle1_normal.x,
-                    triangle1_normal.y,
-                    triangle1_normal.z,
-                ]);
             }
         }
 
@@ -216,6 +162,7 @@ impl Water {
         velocity_apply: &Grid<Vector2<f32>>,
         dimensions: &Vector2<usize>,
         delta_t: f32,
+        viscosity: f32,
     ) -> Grid<Vector2<f32>> {
         let mut new_velocities = velocity_apply.clone();
         //Update Velocities
@@ -235,12 +182,12 @@ impl Water {
                 let v = new_velocities.get_mut_unchecked(Vector2::new(x as i64, y as i64));
                 let center = heights.get_unchecked(Vector2::new(x as i64, y as i64));
                 v.x += (water_x_n1 - center) * delta_t * Self::G;
-                v.x -= v.x * Self::VISC;
                 if x == 0 {
                     v.x = 0.0;
                 }
                 v.y += (water_y_n1 - center) * delta_t * Self::G;
-                v.y -= v.y * Self::VISC;
+
+                *v -= *v * viscosity;
                 if y == 0 {
                     v.y = 0.0;
                 }
@@ -306,100 +253,6 @@ impl Water {
         }
         return heights_out;
     }
-    fn run_timestep(
-        heights: &Grid<f32>,
-        velocity: &Grid<Vector2<f32>>,
-        heights_apply: &mut Grid<f32>,
-        velocities_apply: &mut Grid<Vector2<f32>>,
-        dimensions: &Vector2<usize>,
-        delta_t: f32,
-    ) {
-        //Update Velocities
-        for x in 0..dimensions.x {
-            for y in 0..dimensions.y {
-                let water_x_n1 = if x > 0 {
-                    heights.get_unchecked(Vector2::new(x as i64 - 1, y as i64))
-                } else {
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64))
-                };
-                let water_y_n1 = if y > 0 {
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64 - 1))
-                } else {
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64))
-                };
-
-                let v = velocities_apply.get_mut_unchecked(Vector2::new(x as i64, y as i64));
-                let center = heights.get_unchecked(Vector2::new(x as i64, y as i64));
-                v.x += (water_x_n1 - center) * delta_t * Self::G;
-                v.y += (water_y_n1 - center) * delta_t * Self::G;
-            }
-        }
-
-        //Update Water
-
-        for x in 0..dimensions.x {
-            for y in 0..dimensions.y {
-                let water_yn1 = if y > 0 {
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64 - 1))
-                } else {
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64))
-                };
-                let (water_0, v_y0, u_x0) = (
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64)),
-                    velocities_apply
-                        .get_unchecked(Vector2::new(x as i64, y as i64))
-                        .y,
-                    velocities_apply
-                        .get_unchecked(Vector2::new(x as i64, y as i64))
-                        .x,
-                );
-                let (water_y1, v_y1) = if y <= dimensions.y - 2 {
-                    (
-                        heights.get_unchecked(Vector2::new(x as i64, y as i64 + 1)),
-                        velocities_apply
-                            .get_unchecked(Vector2::new(x as i64, y as i64 + 1))
-                            .y,
-                    )
-                } else {
-                    (
-                        heights.get_unchecked(Vector2::new(x as i64, y as i64)),
-                        velocities_apply
-                            .get_unchecked(Vector2::new(x as i64, y as i64))
-                            .y,
-                    )
-                };
-                let water_xn1 = if x > 0 {
-                    heights.get_unchecked(Vector2::new(x as i64 - 1, y as i64))
-                } else {
-                    heights.get_unchecked(Vector2::new(x as i64, y as i64))
-                };
-                let (water_x1, u_x1) = if x <= dimensions.x - 2 {
-                    (
-                        heights.get_unchecked(Vector2::new(x as i64 + 1, y as i64)),
-                        velocities_apply
-                            .get_unchecked(Vector2::new(x as i64 + 1, y as i64))
-                            .x,
-                    )
-                } else {
-                    (
-                        heights.get_unchecked(Vector2::new(x as i64, y as i64)),
-                        velocities_apply
-                            .get_unchecked(Vector2::new(x as i64, y as i64))
-                            .x,
-                    )
-                };
-                let water_xn1_avg = (water_xn1 + water_0) / 2.0;
-                let water_x1_avg = (water_x1 + water_0) / 2.0;
-
-                let water_yn1_avg = (water_yn1 + water_0) / 2.0;
-                let water_y1_avg = (water_y1 + water_0) / 2.0;
-                let deltax = (u_x1 * water_x1_avg) - (u_x0 * water_xn1_avg);
-                let deltay = (v_y1 * water_y1_avg) - (v_y0 * water_yn1_avg);
-                *heights_apply.get_mut_unchecked(Vector2::new(x as i64, y as i64)) +=
-                    -1.0 * (deltax + deltay) * delta_t;
-            }
-        }
-    }
     pub fn water_simulation(&mut self) {
         //Update Velocities
         for _ in 0..20 {
@@ -409,6 +262,7 @@ impl Water {
                 &self.velocity,
                 &self.dimensions,
                 Self::DELTA_T,
+                self.viscosity,
             );
             let half_h = Self::update_water(
                 &self.heights,
@@ -424,6 +278,7 @@ impl Water {
                 &self.velocity,
                 &self.dimensions,
                 Self::DELTA_T,
+                self.viscosity,
             );
             self.heights = Self::update_water(
                 &half_h,
