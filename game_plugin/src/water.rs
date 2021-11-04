@@ -3,8 +3,89 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
+mod my_solver;
 use nalgebra::{Vector2, Vector3};
 pub struct WaterPlugin;
+/// solver for water
+pub trait Solver {
+    const HEIGHT_MULTIPLIER: f32 = 100.0;
+    /// builds solver
+    fn new(water: Grid<f32>, velocities: Grid<Vector2<f32>>) -> Self;
+    /// runs water simulation and outputs water heights
+    fn solve(&mut self) -> &Grid<f32>;
+    fn update_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
+        let mut position = vec![];
+        let mut normals = vec![];
+        let mut uvs = vec![];
+        for x in 0..water.x() - 1 {
+            for y in 0..water.y() - 1 {
+                let x0_y0 = Vector3::new(
+                    x as f32,
+                    water.get(x, y) as f32 * Self::HEIGHT_MULTIPLIER,
+                    y as f32,
+                );
+                let x0_y1 = Vector3::new(
+                    x as f32,
+                    water.get(x, y + 1) as f32 * Self::HEIGHT_MULTIPLIER,
+                    y as f32 + 1.0,
+                );
+                let x1_y0 = Vector3::new(
+                    x as f32 + 1.0,
+                    water.get(x + 1, y) * Self::HEIGHT_MULTIPLIER,
+                    y as f32,
+                );
+                let x1_y1 = Vector3::new(
+                    x as f32 + 1.0,
+                    water.get(x + 1, y + 1) as f32 * Self::HEIGHT_MULTIPLIER,
+                    y as f32 + 1.0,
+                );
+                let triangle0_normal = (x0_y1 - x0_y0).cross(&(x1_y0 - x0_y0)).normalize();
+                let triangle1_normal = (x1_y0 - x1_y1).cross(&(x0_y1 - x1_y1)).normalize();
+
+                //vert 0
+                position.push([x0_y0.x, x0_y0.y, x0_y0.z]);
+                normals.push([triangle0_normal.x, triangle0_normal.y, triangle0_normal.z]);
+                uvs.push([0.0, 0.0]);
+
+                //vert 1
+                position.push([x0_y1.x, x0_y1.y, x0_y1.z]);
+                normals.push([triangle0_normal.x, triangle0_normal.y, triangle0_normal.z]);
+                uvs.push([0.0, 1.0]);
+                //vert 2
+                position.push([x1_y0.x, x1_y0.y, x1_y0.z]);
+                normals.push([triangle0_normal.x, triangle0_normal.y, triangle0_normal.z]);
+                uvs.push([1.0, 0.0]);
+
+                //Triangle 1
+                //vert3
+                position.push([x1_y1.x, x1_y1.y, x1_y1.z]);
+                normals.push([triangle1_normal.x, triangle1_normal.y, triangle1_normal.z]);
+                uvs.push([1.0, 0.0]);
+
+                //vert4
+                position.push([x1_y0.x, x1_y0.y, x1_y0.z]);
+                normals.push([triangle1_normal.x, triangle1_normal.y, triangle1_normal.z]);
+                uvs.push([1.0, 1.0]);
+                //vert5
+                position.push([x0_y1.x, x0_y1.y, x0_y1.z]);
+                normals.push([triangle1_normal.x, triangle1_normal.y, triangle1_normal.z]);
+                uvs.push([0.0, 1.0]);
+            }
+        }
+
+        let indicies = (0..position.len()).map(|i| i as u32).collect();
+        mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, position);
+        mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        mesh.set_indices(Some(Indices::U32(indicies)));
+    }
+    /// Builds mesh from grid, todo: make water sim inplace for performance reasons
+    fn build_mesh(water: &Grid<f32>) -> Mesh {
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        Self::update_mesh(water, &mut mesh);
+        return mesh;
+    }
+}
 impl Plugin for WaterPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system_set(
@@ -60,6 +141,23 @@ pub struct Water {
     /// viscosity
     viscosity: f32,
 }
+impl Solver for Water {
+    fn new(water: Grid<f32>, velocities: Grid<Vector2<f32>>) -> Self {
+        assert!(velocities.x() == water.x() + 1);
+        assert!(velocities.y() == water.y() + 1);
+        let dimensions = Vector2::new(water.x(), water.y());
+        Self {
+            heights: water,
+            velocity: velocities,
+            dimensions,
+            viscosity: 0.0004,
+        }
+    }
+    fn solve(&mut self) -> &Grid<f32> {
+        self.water_simulation();
+        &self.heights
+    }
+}
 impl Water {
     /// Time step
     const DELTA_T: f32 = 0.01;
@@ -67,7 +165,7 @@ impl Water {
     const G: f32 = 0.1;
     /// Viscosity
     const HEIGHT_MULTIPLIER: f32 = 100.0;
-    pub fn new() -> Self {
+    pub fn _new() -> Self {
         let mut heights_point = vec![0.0; 100 * 100];
         heights_point[50 * 100 + 50] = 0.1;
         Self {
@@ -81,7 +179,7 @@ impl Water {
                 vec![Vector2::new(0.0, 0.0); 101 * 101],
             ),
             dimensions: Vector2::new(100, 100),
-            viscosity: 0.002,
+            viscosity: 0.0004,
         }
     }
     pub fn update_mesh(&self, mesh: &mut Mesh) {
@@ -289,13 +387,24 @@ impl Water {
             );
         }
     }
+    /// Gets viscosity
+    pub fn get_viscosity(&self) -> f32 {
+        self.viscosity
+    }
 }
 fn spawn_water_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let water = Water::new();
+    let mut heights_data = vec![0.0; 100 * 100];
+    heights_data[50 * 50 + 50] = 1.0;
+    let water_heights = Grid::from_vec(Vector2::new(100, 100), heights_data);
+    let velocities = Grid::from_vec(
+        Vector2::new(101, 101),
+        vec![Vector2::new(0.0, 0.0); 101 * 101],
+    );
+    let water = Water::new(water_heights, velocities);
     let mut transform = Transform::from_translation(Vec3::new(0.3, 0.5, 0.3));
     transform.scale = Vec3::new(0.1, 0.1, 0.1);
     commands

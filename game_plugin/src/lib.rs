@@ -17,7 +17,9 @@ use bevy::prelude::*;
 use game_menu::GameMenuPlugin;
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
-
+pub mod prelude {
+    pub use super::water::{Water, WaterMarker};
+}
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html
 // Or https://github.com/bevyengine/bevy/blob/main/examples/ecs/state.rs
