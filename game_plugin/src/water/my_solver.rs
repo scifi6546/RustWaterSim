@@ -14,17 +14,6 @@ pub struct MySolver {
     viscosity: f32,
 }
 impl Solver for MySolver {
-    fn new(water: Grid<f32>, velocities: Grid<Vector2<f32>>) -> Self {
-        assert!(velocities.x() == water.x() + 1);
-        assert!(velocities.y() == water.y() + 1);
-        let dimensions = Vector2::new(water.x(), water.y());
-        Self {
-            heights: water,
-            velocity: velocities,
-            dimensions,
-            viscosity: 0.0004,
-        }
-    }
     fn solve(&mut self) -> &Grid<f32> {
         self.water_simulation();
         &self.heights
@@ -37,6 +26,17 @@ impl MySolver {
     const G: f32 = 0.1;
     /// Viscosity
     const HEIGHT_MULTIPLIER: f32 = 100.0;
+    fn new(water: Grid<f32>, velocities: Grid<Vector2<f32>>) -> Self {
+        assert!(velocities.x() == water.x() + 1);
+        assert!(velocities.y() == water.y() + 1);
+        let dimensions = Vector2::new(water.x(), water.y());
+        Self {
+            heights: water,
+            velocity: velocities,
+            dimensions,
+            viscosity: 0.0004,
+        }
+    }
     pub fn _new() -> Self {
         let mut heights_point = vec![0.0; 100 * 100];
         heights_point[50 * 100 + 50] = 0.1;
