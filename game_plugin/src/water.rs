@@ -3,8 +3,8 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
+mod finite_solver;
 mod my_solver;
-mod new_solver;
 use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
 pub struct WaterPlugin;

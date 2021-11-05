@@ -34,26 +34,9 @@ impl MySolver {
             viscosity: 0.0004,
         }
     }
-    pub fn _new() -> Self {
-        let mut heights_point = vec![0.0; 100 * 100];
-        heights_point[50 * 100 + 50] = 0.1;
-        Self {
-            heights: Grid {
-                points: heights_point,
-                x: 100,
-                y: 100,
-            },
-            velocity: Grid::from_vec(
-                Vector2::new(101, 101),
-                vec![Vector2::new(0.0, 0.0); 101 * 101],
-            ),
-            dimensions: Vector2::new(100, 100),
-            viscosity: 0.0004,
-        }
-    }
     fn update_velocity(
         heights: &Grid<f32>,
-        velocity: &Grid<Vector2<f32>>,
+        _velocity: &Grid<Vector2<f32>>,
         velocity_apply: &Grid<Vector2<f32>>,
         dimensions: &Vector2<usize>,
         delta_t: f32,
