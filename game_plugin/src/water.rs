@@ -4,6 +4,7 @@ use bevy::{
     render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
 mod my_solver;
+mod new_solver;
 use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
 pub struct WaterPlugin;
