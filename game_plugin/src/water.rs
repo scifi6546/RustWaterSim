@@ -13,6 +13,13 @@ pub trait Solver: Send + Sync + 'static {
     /// builds solver
     /// runs water simulation and outputs water heights
     fn solve(&mut self) -> &Grid<f32>;
+    /// Builds mesh from grid, todo: make water sim inplace for performance reasons
+    fn build_mesh(&mut self) -> Mesh {
+        let water = self.solve();
+        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        update_mesh(water, &mut mesh);
+        return mesh;
+    }
 }
 fn update_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
     let mut position = vec![];
@@ -80,12 +87,7 @@ fn update_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
     mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh.set_indices(Some(Indices::U32(indicies)));
 }
-/// Builds mesh from grid, todo: make water sim inplace for performance reasons
-fn build_mesh(water: &Grid<f32>) -> Mesh {
-    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    update_mesh(water, &mut mesh);
-    return mesh;
-}
+
 impl Plugin for WaterPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system_set(
@@ -97,7 +99,7 @@ impl Plugin for WaterPlugin {
     }
 }
 #[derive(Clone)]
-struct Grid<T: Clone + Copy> {
+pub struct Grid<T: Clone + Copy> {
     points: Vec<T>,
     x: usize,
     y: usize,
@@ -144,7 +146,7 @@ fn spawn_water_system(
         Vector2::new(101, 101),
         vec![Vector2::new(0.0, 0.0); 101 * 101],
     );
-    let water = Water::new(water_heights, velocities);
+    let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
     let mut transform = Transform::from_translation(Vec3::new(0.3, 0.5, 0.3));
     transform.scale = Vec3::new(0.1, 0.1, 0.1);
     commands
@@ -166,8 +168,8 @@ fn water_simulation(
     >,
 ) {
     for (_, mut water, mesh) in water_query.iter_mut() {
-        water.water_simulation();
+        let heights = water.solve();
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
-        water.update_mesh(&mut mesh);
+        update_mesh(heights, &mut mesh);
     }
 }

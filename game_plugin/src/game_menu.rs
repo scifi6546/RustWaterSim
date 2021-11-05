@@ -1,4 +1,4 @@
-use crate::prelude::{Water, WaterMarker};
+use crate::prelude::{Solver, WaterMarker};
 use crate::GameState;
 use bevy::prelude::*;
 struct GameMenu;
@@ -132,13 +132,17 @@ fn build_ui(
 }
 fn run_ui(
     mut _commands: Commands,
-    water_query: Query<&Water, With<WaterMarker>>,
+    water_query: Query<&Box<dyn Solver>, With<WaterMarker>>,
     mut query: Query<&mut Text, With<ViscocityChange>>,
 ) {
-    let viscosity = water_query.iter().map(|w| w.get_viscosity()).next().clone();
+    let viscosity = water_query
+        .iter()
+        .map(|_w| "todo: solver info")
+        .next()
+        .clone();
     if let Some(viscosity) = viscosity {
         for mut text in query.iter_mut() {
-            text.sections[0].value = format!("{:^5}", viscosity);
+            text.sections[0].value = format!("{}", viscosity);
         }
     }
 }

@@ -22,7 +22,6 @@ impl Plugin for PlayerPlugin {
 
 fn spawn_camera(mut commands: Commands) {
     let eye = Vec3::new(-2.0, 2.5, 5.0);
-    let target = Vec3::new(50.0, 0.0, 5.0);
     let target = Vec3::ZERO;
     commands
         .spawn_bundle(OrbitCameraBundle::new(
