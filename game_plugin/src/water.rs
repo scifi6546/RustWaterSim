@@ -9,7 +9,7 @@ use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
 pub struct WaterPlugin;
 /// solver for water
-const HEIGHT_MULTIPLIER: f32 = 100.0;
+const HEIGHT_MULTIPLIER: f32 = 10.0;
 pub trait Solver: Send + Sync + 'static {
     /// builds solver
     /// runs water simulation and outputs water heights
@@ -114,9 +114,11 @@ impl<T: Clone + Copy> Grid<T> {
             y: dimensions.y,
         }
     }
+    /// X dimensions
     pub fn x(&self) -> usize {
         self.x
     }
+    /// Y dimensions
     pub fn y(&self) -> usize {
         self.y
     }
@@ -124,13 +126,17 @@ impl<T: Clone + Copy> Grid<T> {
     pub fn get(&self, x: usize, y: usize) -> T {
         self.points[self.y * x + y]
     }
+    /// gets mut unchecked
+    pub fn get_mut(&mut self, x: usize, y: usize) -> &mut T {
+        &mut self.points[self.y * x + y]
+    }
     /// gets points unchecked at point
     pub fn get_unchecked(&self, dim: Vector2<i64>) -> T {
-        self.points[self.y * dim.x as usize + dim.y as usize]
+        self.get(dim.x as usize, dim.y as usize)
     }
     /// gets unchecked mut
     pub fn get_mut_unchecked(&mut self, dim: Vector2<i64>) -> &mut T {
-        &mut self.points[self.y * dim.x as usize + dim.y as usize]
+        self.get_mut(dim.x as usize, dim.y as usize)
     }
 }
 pub struct WaterMarker;
@@ -147,7 +153,8 @@ fn spawn_water_system(
         Vector2::new(101, 101),
         vec![Vector2::new(0.0, 0.0); 101 * 101],
     );
-    let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
+    //let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
+    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::new());
     let mut transform = Transform::from_translation(Vec3::new(0.3, 0.5, 0.3));
     transform.scale = Vec3::new(0.1, 0.1, 0.1);
     commands
