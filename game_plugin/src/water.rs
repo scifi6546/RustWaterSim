@@ -105,7 +105,7 @@ pub struct Grid<T: Clone + Copy> {
     x: usize,
     y: usize,
 }
-impl<T: Clone + Copy> Grid<T> {
+impl<T: Clone + Copy + Default> Grid<T> {
     pub fn from_vec(dimensions: Vector2<usize>, points: Vec<T>) -> Self {
         assert_eq!(dimensions.x * dimensions.y, points.len());
         Self {
@@ -137,6 +137,16 @@ impl<T: Clone + Copy> Grid<T> {
     /// gets unchecked mut
     pub fn get_mut_unchecked(&mut self, dim: Vector2<i64>) -> &mut T {
         self.get_mut(dim.x as usize, dim.y as usize)
+    }
+    /// builds grid from function
+    pub fn from_fn<F: Fn(usize, usize) -> T>(f: F, dimensions: Vector2<usize>) -> Self {
+        let mut s = Self::from_vec(dimensions, vec![T::default(); dimensions.x * dimensions.y]);
+        for x in 0..dimensions.x {
+            for y in 0..dimensions.y {
+                *s.get_mut(x, y) = f(x, y);
+            }
+        }
+        s
     }
 }
 pub struct WaterMarker;

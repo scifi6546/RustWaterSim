@@ -1,6 +1,7 @@
 /// based off of https://github.com/jostbr/shallow-water/blob/master/swe.py
 use super::{Grid, Solver};
 use nalgebra::Vector2;
+use std::cmp::max;
 pub struct FiniteSolver {
     /// Water height
     h: Grid<f32>,
@@ -11,10 +12,13 @@ pub struct FiniteSolver {
 }
 impl Solver for FiniteSolver {
     fn solve(&mut self) -> &Grid<f32> {
+        let mut max_delta = 0.0;
         for _ in 0..300 {
             Self::update_velocity(&self.h, &mut self.u, &mut self.v);
-            Self::update_heights(&mut self.h, &self.u, &self.v);
+            let delta = Self::update_heights(&mut self.h, &self.u, &self.v);
+            max_delta = if delta > max_delta { delta } else { max_delta };
         }
+        println!("max delta: {}", max_delta);
         &self.h
     }
 }
@@ -36,13 +40,14 @@ impl FiniteSolver {
                     let hyn1 = heights.get(x, y - 1);
                     let hyp1 = heights.get(x, y);
                     *v.get_mut(x, y) += Self::G * (Self::DT / Self::DY) * (hyp1 - hyn1);
-                    *v.get_mut(x, y) *= (1.0 - Self::VISC * Self::DT);
+                    *v.get_mut(x, y) *= 1.0 - Self::VISC * Self::DT;
                 }
             }
         }
     }
-    fn update_heights(h: &mut Grid<f32>, u: &Grid<f32>, v: &Grid<f32>) {
+    fn update_heights(h: &mut Grid<f32>, u: &Grid<f32>, v: &Grid<f32>) -> f32 {
         let h_old = h.clone();
+        let mut max_delta = 0.0;
         for x in 0..h.x() {
             for y in 0..h.y() {
                 let un1 = u.get(x, y);
@@ -74,25 +79,29 @@ impl FiniteSolver {
                 let h0 = h_old.get(x, y);
                 let dx = un1 * (hxn1 + h0) / 2.0 - up1 * (hxp1 + h0) / 2.0;
                 let dy = vn1 * (hyn1 + h0) / 2.0 - vp1 * (hyp1 + h0) / 2.0;
-                // bad scheme lets see how it goes anyways
-                *h.get_mut(x, y) -= Self::DT * (dx + dy);
+                let delta = Self::DT * (dx + dy);
+                max_delta = if delta > max_delta { delta } else { max_delta };
+                *h.get_mut(x, y) -= delta;
             }
         }
+        max_delta
     }
     pub fn new() -> Self {
-        let mut water_data = vec![0.0f32; 100 * 100];
+        let water_data = vec![0.0f32; 100 * 100];
         //water_data[50 * 50 + 50] = 0.5;
         let u = vec![0.0f32; 101 * 100];
         let v_data = u.clone();
-        let mut h = Grid::from_vec(Vector2::new(100, 100), water_data);
-        for x in 0..100 {
-            for y in 0..100 {
+        let h = Grid::from_fn(
+            |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
                 if r <= 10.0 {
-                    *h.get_mut(x, y) = (10.0 - r) / 10.0;
+                    (10.0 - r) / 10.0
+                } else {
+                    0.0
                 }
-            }
-        }
+            },
+            Vector2::new(100, 100),
+        );
         let u = Grid::from_vec(Vector2::new(101, 100), u);
         let v = Grid::from_vec(Vector2::new(100, 101), v_data);
         Self { h, u, v }
