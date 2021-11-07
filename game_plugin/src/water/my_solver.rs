@@ -1,4 +1,4 @@
-use super::{Grid, Solver};
+use super::{Grid, SolveInfo, Solver};
 
 use nalgebra::Vector2;
 pub struct MySolver {
@@ -11,9 +11,9 @@ pub struct MySolver {
     viscosity: f32,
 }
 impl Solver for MySolver {
-    fn solve(&mut self) -> &Grid<f32> {
+    fn solve(&mut self) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.water_simulation();
-        &self.heights
+        (&self.heights, vec![])
     }
 }
 impl MySolver {
@@ -31,7 +31,7 @@ impl MySolver {
             heights: water,
             velocity: velocities,
             dimensions,
-            viscosity: 0.0004,
+            viscosity: 0.000004,
         }
     }
     fn update_velocity(
@@ -76,11 +76,10 @@ impl MySolver {
     fn update_water(
         heights: &Grid<f32>,
         velocity: &Grid<Vector2<f32>>,
-        heights_apply: &Grid<f32>,
+        heights_apply: &mut Grid<f32>,
         dimensions: &Vector2<usize>,
         delta_t: f32,
-    ) -> Grid<f32> {
-        let mut heights_out = heights_apply.clone();
+    ) {
         for x in 0..dimensions.x {
             for y in 0..dimensions.y {
                 let water_yn1 = if y > 0 {
@@ -125,11 +124,10 @@ impl MySolver {
                 let water_y1_avg = (water_y1 + water_0) / 2.0;
                 let deltax = (u_x1 * water_x1_avg) - (u_x0 * water_xn1_avg);
                 let deltay = (v_y1 * water_y1_avg) - (v_y0 * water_yn1_avg);
-                *heights_out.get_mut_unchecked(Vector2::new(x as i64, y as i64)) +=
+                *heights_apply.get_mut_unchecked(Vector2::new(x as i64, y as i64)) +=
                     -1.0 * (deltax + deltay) * delta_t;
             }
         }
-        return heights_out;
     }
     pub fn water_simulation(&mut self) {
         //Update Velocities
@@ -139,15 +137,16 @@ impl MySolver {
                 &self.velocity,
                 &self.velocity,
                 &self.dimensions,
-                Self::DELTA_T,
+                Self::DELTA_T / 2.0,
                 self.viscosity,
             );
-            let half_h = Self::update_water(
+            let mut half_h = self.heights.clone();
+            Self::update_water(
                 &self.heights,
                 &self.velocity,
-                &self.heights,
+                &mut half_h,
                 &self.dimensions,
-                Self::DELTA_T,
+                Self::DELTA_T / 2.0,
             );
 
             self.velocity = Self::update_velocity(
@@ -158,10 +157,10 @@ impl MySolver {
                 Self::DELTA_T,
                 self.viscosity,
             );
-            self.heights = Self::update_water(
+            Self::update_water(
                 &half_h,
                 &half_uv,
-                &self.heights,
+                &mut self.heights,
                 &self.dimensions,
                 Self::DELTA_T,
             );
