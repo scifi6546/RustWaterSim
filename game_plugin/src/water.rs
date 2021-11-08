@@ -168,9 +168,9 @@ fn spawn_water_system(
         vec![Vector2::new(0.0, 0.0); 101 * 101],
     );
     //let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
-    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
+    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
+    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
     let mut transform = Transform::from_translation(Vec3::new(0.3, 0.5, 0.3));
     transform.scale = Vec3::new(0.1, 0.1, 0.1);
     let info: Vec<SolveInfo> = vec![];

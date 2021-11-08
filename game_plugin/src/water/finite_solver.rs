@@ -105,17 +105,29 @@ impl FiniteSolver {
                 let vn1 = v.get(x, y);
                 let vp1 = v.get(x, y + 1);
 
-                let hxn1 = if x >= 1 { h.get(x - 1, y) } else { h.get(x, y) };
+                let hxn1 = if x >= 1 {
+                    h.get(x - 1, y)
+                } else {
+                    continue;
+                    h.get(x, y)
+                };
                 let hxp1 = if x <= h.x() - 2 {
                     h.get(x + 1, y)
                 } else {
+                    continue;
                     h.get(x, y)
                 };
 
-                let hyn1 = if y >= 1 { h.get(x, y - 1) } else { h.get(x, y) };
+                let hyn1 = if y >= 1 {
+                    h.get(x, y - 1)
+                } else {
+                    continue;
+                    h.get(x, y)
+                };
                 let hyp1 = if y <= h.y() - 2 {
                     h.get(x, y + 1)
                 } else {
+                    continue;
                     h.get(x, y)
                 };
                 let h0 = h.get(x, y);
@@ -167,15 +179,12 @@ impl FiniteSolver {
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
         let h = Grid::from_fn(
-            |x, y| {
-                if x >= 5 && x <= 95 {
-                    match y {
-                        0 => 1.0,
-                        _ => 0.0,
-                    }
-                } else {
-                    0.0
-                }
+            |x, y| match y {
+                0 => 1.0,
+                1 => 1.0,
+                2 => 1.0,
+                3 => 1.0,
+                _ => 0.0,
             },
             Vector2::new(100, 100),
         );
