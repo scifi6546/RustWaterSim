@@ -55,7 +55,7 @@ impl FiniteSolver {
     const G: f32 = 9.81;
     const DT: f32 = 0.001;
     const VISC: f32 = 0.001;
-    const BOUNDRY: BoundryType = BoundryType::NoReflection;
+    const BOUNDRY: BoundryType = BoundryType::Source;
     /// Returns max displacement in timestep
     pub fn time_step(&mut self) -> f32 {
         let mut u_half = self.u.clone();

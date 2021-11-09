@@ -15,6 +15,8 @@ impl Plugin for GameMenuPlugin {
 /// Marks viscocoty change text button
 struct ViscocityChange;
 struct SolveInfoLabel;
+/// Marks Show Velocities button
+struct ShowVelocities;
 fn build_ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
