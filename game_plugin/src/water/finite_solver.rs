@@ -5,6 +5,11 @@
 use super::{Grid, SolveInfo, Solver};
 use nalgebra::Vector2;
 use std::cmp::max;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BoundryType {
+    Source,
+    NoReflection,
+}
 pub struct FiniteSolver {
     /// Water height
     h: Grid<f32>,
@@ -50,6 +55,7 @@ impl FiniteSolver {
     const G: f32 = 9.81;
     const DT: f32 = 0.001;
     const VISC: f32 = 0.001;
+    const BOUNDRY: BoundryType = BoundryType::NoReflection;
     /// Returns max displacement in timestep
     pub fn time_step(&mut self) -> f32 {
         let mut u_half = self.u.clone();
@@ -105,34 +111,61 @@ impl FiniteSolver {
                 let vn1 = v.get(x, y);
                 let vp1 = v.get(x, y + 1);
 
-                let hxn1 = if x >= 1 {
-                    h.get(x - 1, y)
-                } else {
-                    continue;
-                    h.get(x, y)
-                };
+                let hxn1 = if x >= 1 { h.get(x - 1, y) } else { h.get(x, y) };
                 let hxp1 = if x <= h.x() - 2 {
                     h.get(x + 1, y)
                 } else {
-                    continue;
                     h.get(x, y)
                 };
 
-                let hyn1 = if y >= 1 {
-                    h.get(x, y - 1)
-                } else {
-                    continue;
-                    h.get(x, y)
-                };
+                let hyn1 = if y >= 1 { h.get(x, y - 1) } else { h.get(x, y) };
                 let hyp1 = if y <= h.y() - 2 {
                     h.get(x, y + 1)
                 } else {
-                    continue;
                     h.get(x, y)
                 };
                 let h0 = h.get(x, y);
-                let dx = un1 * (hxn1 + h0) / 2.0 - up1 * (hxp1 + h0) / 2.0;
-                let dy = vn1 * (hyn1 + h0) / 2.0 - vp1 * (hyp1 + h0) / 2.0;
+                let mut dx = 0.0;
+                //lower x boundry
+                if x >= 1 {
+                    dx += un1 * (hxn1 + h0) / 2.0;
+                } else {
+                    match Self::BOUNDRY {
+                        BoundryType::Source => continue,
+                        BoundryType::NoReflection => {}
+                    }
+                }
+                // upper x boundry
+                if x <= h.x() - 2 {
+                    dx -= up1 * (hxp1 + h0) / 2.0;
+                } else {
+                    match Self::BOUNDRY {
+                        BoundryType::Source => continue,
+                        BoundryType::NoReflection => {}
+                    }
+                }
+
+                //let dx = un1 * (hxn1 + h0) / 2.0 - up1 * (hxp1 + h0) / 2.0;
+                let mut dy = 0.0;
+                //lower y boundry
+                if y >= 1 {
+                    dy += vn1 * (hyn1 + h0) / 2.0;
+                } else {
+                    match Self::BOUNDRY {
+                        BoundryType::Source => continue,
+                        BoundryType::NoReflection => {}
+                    }
+                }
+                // upper y boundry
+                if x <= h.x() - 2 {
+                    dy -= vp1 * (hyp1 + h0) / 2.0;
+                } else {
+                    match Self::BOUNDRY {
+                        BoundryType::Source => continue,
+                        BoundryType::NoReflection => {}
+                    }
+                }
+                //let dy = vn1 * (hyn1 + h0) / 2.0 - vp1 * (hyp1 + h0) / 2.0;
                 let delta = delta_t * (dx + dy);
                 max_delta = if delta > max_delta { delta } else { max_delta };
                 *h_apply.get_mut(x, y) -= delta;
