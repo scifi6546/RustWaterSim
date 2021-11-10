@@ -8,7 +8,7 @@ use std::cmp::max;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BoundryType {
     Source,
-    NoReflection,
+    Reflection,
 }
 pub struct FiniteSolver {
     /// Water height
@@ -55,7 +55,7 @@ impl FiniteSolver {
     const G: f32 = 9.81;
     const DT: f32 = 0.1;
     const VISC: f32 = 0.0;
-    const BOUNDRY: BoundryType = BoundryType::NoReflection;
+    const BOUNDRY: BoundryType = BoundryType::Reflection;
     /// Returns max displacement in timestep
     pub fn time_step(&mut self) -> f32 {
         let mut u_half = self.u.clone();
@@ -132,7 +132,7 @@ impl FiniteSolver {
                 } else {
                     match Self::BOUNDRY {
                         BoundryType::Source => continue,
-                        BoundryType::NoReflection => {}
+                        BoundryType::Reflection => {}
                     }
                 }
                 // upper x boundry
@@ -141,7 +141,7 @@ impl FiniteSolver {
                 } else {
                     match Self::BOUNDRY {
                         BoundryType::Source => continue,
-                        BoundryType::NoReflection => {}
+                        BoundryType::Reflection => {}
                     }
                 }
 
@@ -153,16 +153,16 @@ impl FiniteSolver {
                 } else {
                     match Self::BOUNDRY {
                         BoundryType::Source => continue,
-                        BoundryType::NoReflection => {}
+                        BoundryType::Reflection => {}
                     }
                 }
                 // upper y boundry
-                if x <= h.x() - 2 {
+                if y <= h.y() - 2 {
                     dy -= vp1 * (hyp1 + h0) / 2.0;
                 } else {
                     match Self::BOUNDRY {
                         BoundryType::Source => continue,
-                        BoundryType::NoReflection => {}
+                        BoundryType::Reflection => {}
                     }
                 }
                 let delta = delta_t * (dx + dy);
