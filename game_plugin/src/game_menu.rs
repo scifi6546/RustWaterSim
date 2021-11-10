@@ -5,8 +5,14 @@ struct GameMenu;
 pub struct GameMenuPlugin;
 impl Plugin for GameMenuPlugin {
     fn build(&self, app: &mut AppBuilder) {
+        app.init_resource::<ButtonMaterial>();
+        app.init_resource::<GuiState>();
         app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(build_ui.system()));
         app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(run_ui.system()));
+
+        app.add_system_set(
+            SystemSet::on_update(GameState::Playing).with_system(show_velocity_button.system()),
+        );
         app.add_system_set(
             SystemSet::on_update(GameState::Playing).with_system(solve_info.system()),
         );
@@ -15,14 +21,52 @@ impl Plugin for GameMenuPlugin {
 /// Marks viscocoty change text button
 struct ViscocityChange;
 struct SolveInfoLabel;
+struct ButtonMaterial {
+    normal: Handle<ColorMaterial>,
+    hovered: Handle<ColorMaterial>,
+    pressed: Handle<ColorMaterial>,
+}
+impl FromWorld for ButtonMaterial {
+    fn from_world(world: &mut World) -> Self {
+        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
+
+        Self {
+            normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
+            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
+            pressed: materials.add(Color::rgb(0.35, 0.35, 0.35).into()),
+        }
+    }
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GuiState {
+    pub show_velocities: bool,
+    pub show_water: bool,
+}
+impl Default for GuiState {
+    fn default() -> Self {
+        Self {
+            show_velocities: false,
+            show_water: true,
+        }
+    }
+}
+impl FromWorld for GuiState {
+    fn from_world(_: &mut World) -> Self {
+        Default::default()
+    }
+}
 /// Marks Show Velocities button
 struct ShowVelocities;
+/// Marks show water
+struct ShowWater;
 fn build_ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    button_material: Res<ButtonMaterial>,
 ) {
     println!("building ui");
+    let mut gui_state = GuiState::default();
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -89,8 +133,116 @@ fn build_ui(
                     ..Default::default()
                 })
                 .insert(SolveInfoLabel);
+            parent
+                .spawn_bundle(ButtonBundle {
+                    style: Style {
+                        margin: Rect::all(Val::Px(5.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..Default::default()
+                    },
+                    material: button_material.normal.clone(),
+                    ..Default::default()
+                })
+                .insert(ShowVelocities)
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle {
+                        style: Style {
+                            align_self: AlignSelf::Center,
+                            margin: Rect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        text: Text::with_section(
+                            "Show Velocities",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                            Default::default(),
+                        ),
+                        ..Default::default()
+                    });
+                });
+            parent
+                .spawn_bundle(ButtonBundle {
+                    style: Style {
+                        margin: Rect::all(Val::Px(5.0)),
+                        justify_content: JustifyContent::Center,
+                        align_items: AlignItems::Center,
+                        ..Default::default()
+                    },
+                    material: match gui_state.show_water {
+                        true => button_material.pressed.clone(),
+                        false => button_material.normal.clone(),
+                    },
+                    ..Default::default()
+                })
+                .insert(ShowWater)
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle {
+                        style: Style {
+                            align_self: AlignSelf::Center,
+                            margin: Rect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        text: Text::with_section(
+                            "Show Water",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                            Default::default(),
+                        ),
+                        ..Default::default()
+                    });
+                });
         })
         .insert(GameMenu);
+}
+fn show_velocity_button(
+    button_materials: Res<ButtonMaterial>,
+    mut gui_state: ResMut<GuiState>,
+    mut queries: QuerySet<(
+        Query<
+            (&Interaction, &mut Handle<ColorMaterial>, &Children),
+            (Changed<Interaction>, With<ShowVelocities>),
+        >,
+        Query<
+            (&Interaction, &mut Handle<ColorMaterial>, &Children),
+            (Changed<Interaction>, With<ShowWater>),
+        >,
+    )>,
+) {
+    for (interation, mut material, children) in queries.q0_mut().iter_mut() {
+        match *interation {
+            Interaction::Clicked => {
+                gui_state.show_velocities = !gui_state.show_velocities;
+                if gui_state.show_velocities {
+                    *material = button_materials.pressed.clone();
+                } else {
+                    *material = button_materials.normal.clone();
+                }
+            }
+            Interaction::Hovered => {}
+            Interaction::None => {}
+        }
+    }
+    for (interation, mut material, children) in queries.q1_mut().iter_mut() {
+        match *interation {
+            Interaction::Clicked => {
+                gui_state.show_water = !gui_state.show_water;
+                if gui_state.show_water {
+                    *material = button_materials.pressed.clone();
+                } else {
+                    *material = button_materials.normal.clone();
+                }
+            }
+            Interaction::Hovered => {}
+            Interaction::None => {}
+        }
+    }
 }
 fn solve_info(
     mut _commands: Commands,

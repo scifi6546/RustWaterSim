@@ -1,3 +1,4 @@
+use crate::prelude::GuiState;
 use crate::GameState;
 use bevy::{
     prelude::*,
@@ -204,4 +205,11 @@ fn water_simulation(
         update_mesh(heights, &mut mesh);
         *info = out_info;
     }
+}
+/// Handles showing velocities and water
+fn show_water(
+    gui_state: Res<GuiState>,
+    water_query: Query<(&mut Transform, &mut Visible, &mut Box<dyn Solver>), With<WaterMarker>>,
+) {
+    if gui_state.show_water == false {}
 }
