@@ -21,7 +21,7 @@ pub struct FiniteSolver {
 impl Solver for FiniteSolver {
     fn solve(&mut self) -> (&Grid<f32>, Vec<SolveInfo>) {
         let mut max_delta = 0.0;
-        for _ in 0..100 {
+        for _ in 0..10 {
             //Self::update_velocity(&self.h, &mut self.u, &mut self.v, Self::DT);
             //let old_h = self.h.clone();
             //let delta = Self::update_heights(&old_h, &mut self.h, &self.u, &self.v, Self::DT);
@@ -53,16 +53,16 @@ impl FiniteSolver {
     const DX: f32 = 999.0;
     const DY: f32 = 999.0;
     const G: f32 = 9.81;
-    const DT: f32 = 0.001;
-    const VISC: f32 = 0.001;
-    const BOUNDRY: BoundryType = BoundryType::Source;
+    const DT: f32 = 0.1;
+    const VISC: f32 = 0.0;
+    const BOUNDRY: BoundryType = BoundryType::NoReflection;
     /// Returns max displacement in timestep
     pub fn time_step(&mut self) -> f32 {
         let mut u_half = self.u.clone();
         let mut v_half = self.v.clone();
         let half_uv = Self::update_velocity(&self.h, &mut u_half, &mut v_half, Self::DT / 2.0);
         let mut half_h = self.h.clone();
-        Self::update_heights(&self.h, &mut half_h, &u_half, &v_half, Self::DT / 2.0);
+        Self::update_heights(&self.h, &mut half_h, &self.u, &self.v, Self::DT / 2.0);
 
         Self::update_velocity(&half_h, &mut self.u, &mut self.v, Self::DT);
         Self::update_heights(&half_h, &mut self.h, &self.u, &self.v, Self::DT)
@@ -165,7 +165,6 @@ impl FiniteSolver {
                         BoundryType::NoReflection => {}
                     }
                 }
-                //let dy = vn1 * (hyn1 + h0) / 2.0 - vp1 * (hyp1 + h0) / 2.0;
                 let delta = delta_t * (dx + dy);
                 max_delta = if delta > max_delta { delta } else { max_delta };
                 *h_apply.get_mut(x, y) -= delta;
@@ -178,9 +177,9 @@ impl FiniteSolver {
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
                 if r <= 10.0 {
-                    (10.0 - r) / 10.0
+                    (10.0 - r) / 10.0 + 1.0
                 } else {
-                    0.0
+                    1.0
                 }
             },
             Vector2::new(100, 100),
@@ -212,12 +211,16 @@ impl FiniteSolver {
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
         let h = Grid::from_fn(
-            |x, y| match y {
-                0 => 1.0,
-                1 => 1.0,
-                2 => 1.0,
-                3 => 1.0,
-                _ => 0.0,
+            |x, y| {
+                if x > 5 && x < 20 {
+                    if y > 5 && y < 95 {
+                        1.5
+                    } else {
+                        1.0
+                    }
+                } else {
+                    1.0
+                }
             },
             Vector2::new(100, 100),
         );
