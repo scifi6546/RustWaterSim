@@ -6,9 +6,26 @@ use bevy::{
 };
 mod finite_solver;
 mod my_solver;
+mod uv_show;
+
 use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
+
 pub struct WaterPlugin;
+impl Plugin for WaterPlugin {
+    fn build(&self, app: &mut AppBuilder) {
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Playing).with_system(spawn_water_system.system()),
+        )
+        .add_system_set(
+            SystemSet::on_enter(GameState::Playing).with_system(uv_show::build_uv_cubes.system()),
+        )
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing).with_system(water_simulation.system()),
+        )
+        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_water.system()));
+    }
+}
 /// solver for water
 const HEIGHT_MULTIPLIER: f32 = 10.0;
 pub trait Solver: Send + Sync + 'static {
@@ -100,17 +117,6 @@ fn update_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
     mesh.set_indices(Some(Indices::U32(indicies)));
 }
 
-impl Plugin for WaterPlugin {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_system_set(
-            SystemSet::on_enter(GameState::Playing).with_system(spawn_water_system.system()),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(water_simulation.system()),
-        )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_water.system()));
-    }
-}
 #[derive(Clone)]
 pub struct Grid<T: Clone + Copy> {
     points: Vec<T>,
