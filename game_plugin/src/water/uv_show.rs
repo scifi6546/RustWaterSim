@@ -2,12 +2,15 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
-const SCALE: f32 = 5.0;
+const SCALE: f32 = 0.5;
 pub fn build_uv_cubes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
+    let x: f32 = 1.0;
+    let y: f32 = 1.0;
+    let z: f32 = -1.0;
     let mut cube = Mesh::new(PrimitiveTopology::TriangleList);
     let mut position: Vec<[f32; 3]> = vec![];
     let mut normal: Vec<[f32; 3]> = vec![];
@@ -16,20 +19,20 @@ pub fn build_uv_cubes(
     //face 0
 
     //vertex 0
-    position.push([0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
+    position.push([0.5 * SCALE + x, -0.5 * SCALE + y, 0.5 * SCALE + z]);
     uv.push([2.0 / 6.0, 0.0]);
     normal.push([1.0, 0.0, 0.0]);
 
     //vertex 1
-    position.push([0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
+    position.push([0.5 * SCALE + x, -0.5 * SCALE + y, -0.5 * SCALE + z]);
     uv.push([2.0 / 6.0, 1.0]);
     normal.push([1.0, 0.0, 0.0]);
     // vertex 2
-    position.push([0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
+    position.push([0.5 * SCALE + x, 0.5 * SCALE + y, -0.5 * SCALE + z]);
     uv.push([1.0 / 6.0, 1.0]);
     normal.push([1.0, 0.0, 0.0]);
     //vertex 3
-    position.push([0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
+    position.push([0.5 * SCALE + x, 0.5 * SCALE + y, 0.5 * SCALE + z]);
     uv.push([1.0 / 6.0, 0.0]);
     normal.push([1.0, 0.0, 0.0]);
 
