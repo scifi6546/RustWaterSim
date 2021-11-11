@@ -22,6 +22,12 @@ pub trait Solver: Send + Sync + 'static {
         update_mesh(water, &mut mesh);
         return mesh;
     }
+    /// output refrence to h data
+    fn h(&self) -> &Grid<f32>;
+    /// output velocity in x direction grid
+    fn u(&self) -> &Grid<f32>;
+    /// output velocity in y direction grid
+    fn v(&self) -> &Grid<f32>;
 }
 pub struct SolveInfo {
     pub name: &'static str,
@@ -101,7 +107,8 @@ impl Plugin for WaterPlugin {
         )
         .add_system_set(
             SystemSet::on_update(GameState::Playing).with_system(water_simulation.system()),
-        );
+        )
+        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_water.system()));
     }
 }
 #[derive(Clone)]
@@ -208,8 +215,15 @@ fn water_simulation(
 }
 /// Handles showing velocities and water
 fn show_water(
-    gui_state: Res<GuiState>,
-    water_query: Query<(&mut Transform, &mut Visible, &mut Box<dyn Solver>), With<WaterMarker>>,
+    mut water_query: Query<(&mut Transform, &mut Visible, &mut Box<dyn Solver>), With<WaterMarker>>,
+    gui_query: Query<(&GuiState), Changed<GuiState>>,
 ) {
-    if gui_state.show_water == false {}
+    let gui_state = gui_query.iter().next();
+    if gui_state.is_none() {
+        return;
+    }
+    let gui_state = gui_state.unwrap();
+    for (_t, mut visible, _solver) in water_query.iter_mut() {
+        visible.is_visible = gui_state.show_water;
+    }
 }

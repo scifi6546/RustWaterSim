@@ -15,6 +15,15 @@ impl Solver for MySolver {
         self.water_simulation();
         (&self.heights, vec![])
     }
+    fn h(&self) -> &Grid<f32> {
+        &self.heights
+    }
+    fn u(&self) -> &Grid<f32> {
+        panic!("u not defined for this solver")
+    }
+    fn v(&self) -> &Grid<f32> {
+        panic!("v not defined for this solver")
+    }
 }
 impl MySolver {
     /// Time step

@@ -48,6 +48,15 @@ impl Solver for FiniteSolver {
             ],
         )
     }
+    fn h(&self) -> &Grid<f32> {
+        &self.h
+    }
+    fn v(&self) -> &Grid<f32> {
+        &self.v
+    }
+    fn u(&self) -> &Grid<f32> {
+        &self.u
+    }
 }
 impl FiniteSolver {
     const DX: f32 = 999.0;
