@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
+const SCALE: f32 = 5.0;
 pub fn build_uv_cubes(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -15,115 +16,115 @@ pub fn build_uv_cubes(
     //face 0
 
     //vertex 0
-    position.push([1.0, 0.0, 1.0]);
+    position.push([0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
     uv.push([2.0 / 6.0, 0.0]);
     normal.push([1.0, 0.0, 0.0]);
 
     //vertex 1
-    position.push([1.0, 0.0, 0.0]);
+    position.push([0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
     uv.push([2.0 / 6.0, 1.0]);
     normal.push([1.0, 0.0, 0.0]);
     // vertex 2
-    position.push([1.0, 1.0, 0.0]);
+    position.push([0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
     uv.push([1.0 / 6.0, 1.0]);
     normal.push([1.0, 0.0, 0.0]);
     //vertex 3
-    position.push([1.0, 1.0, 1.0]);
+    position.push([0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
     uv.push([1.0 / 6.0, 0.0]);
     normal.push([1.0, 0.0, 0.0]);
 
     //face 1
     //vertex 4
-    position.push([1.0, 0.0, 0.0]);
+    position.push([0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
     uv.push([3.0 / 6.0, 0.0]);
     normal.push([0.0, 1.0, 0.0]);
     // vertex 5
-    position.push([0.0, 0.0, 0.0]);
+    position.push([-0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
     uv.push([3.0 / 6.0, 1.0]);
     normal.push([0.0, 1.0, 0.0]);
     //vertex 6
-    position.push([1.0, 1.0, 0.0]);
+    position.push([0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
     uv.push([2.0 / 6.0, 0.0]);
     normal.push([0.0, 1.0, 0.0]);
     //vertex 7
-    position.push([0.0, 1.0, 0.0]);
+    position.push([-0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
     uv.push([2.0 / 6.0, 1.0]);
     normal.push([0.0, 1.0, 0.0]);
     //face 2
     //vertex 8
 
-    position.push([0.0, 0.0, 0.0]);
+    position.push([-0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
     uv.push([4.0 / 6.0, 0.0]);
     normal.push([-1.0, 0.0, 0.0]);
     //vertex 9
-    position.push([0.0, 0.0, 1.0]);
+    position.push([-0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
     uv.push([4.0 / 6.0, 1.0]);
     normal.push([-1.0, 0.0, 0.0]);
     // vertex 10
 
-    position.push([0.0, 1.0, 0.0]);
+    position.push([-0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
     uv.push([3.0 / 6.0, 0.0]);
     normal.push([-1.0, 0.0, 0.0]);
     //vertex 11
-    position.push([0.0, 1.0, 1.0]);
+    position.push([-0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
     uv.push([3.0 / 6.0, 1.0]);
     normal.push([-1.0, 0.0, 0.0]);
     //face 3
     //vertex 12
 
-    position.push([0.0, 0.0, 1.0]);
+    position.push([-0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
     uv.push([5.0 / 6.0, 0.0]);
     normal.push([0.0, 0.0, 1.0]);
     // vertex 13
 
-    position.push([1.0, 0.0, 1.0]);
+    position.push([0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
     uv.push([5.0 / 6.0, 1.0]);
     normal.push([0.0, 0.0, 1.0]);
     // vertex 14
-    position.push([0.0, 1.0, 1.0]);
+    position.push([-0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
     uv.push([4.0 / 6.0, 0.0]);
     normal.push([0.0, 0.0, 1.0]);
     //vertex 15
 
-    position.push([1.0, 1.0, 1.0]);
+    position.push([0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
     uv.push([4.0 / 6.0, 1.0]);
     normal.push([0.0, 0.0, 1.0]);
     //face 4
     // vertex 16
 
-    position.push([1.0, 1.0, 1.0]);
+    position.push([0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
     uv.push([0.0, 0.0]);
     normal.push([0.0, 1.0, 0.0]);
     // vertex 17
-    position.push([1.0, 1.0, 0.0]);
+    position.push([0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
     uv.push([1.0 / 6.0, 0.0]);
     normal.push([0.0, 1.0, 0.0]);
     // vertex 18
 
-    position.push([0.0, 1.0, 1.0]);
+    position.push([-0.5 * SCALE, 0.5 * SCALE, 0.5 * SCALE]);
     uv.push([0.0, 1.0]);
     normal.push([0.0, 1.0, 0.0]);
     //vertex 19
-    position.push([0.0, 1.0, 0.0]);
+    position.push([-0.5 * SCALE, 0.5 * SCALE, -0.5 * SCALE]);
     uv.push([1.0 / 6.0, 1.0]);
     normal.push([0.0, 1.0, 0.0]);
     // face 5
     //vertex 20
 
-    position.push([1.0, 0.0, 1.0]);
+    position.push([0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
     uv.push([5.0 / 6.0, 0.0]);
     normal.push([0.0, -1.0, 0.0]);
     //vertex 21
-    position.push([1.0, 0.0, 0.0]);
+    position.push([0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
     uv.push([5.0 / 6.0, 1.0]);
     normal.push([0.0, -1.0, 0.0]);
     //vertex 22
 
-    position.push([0.0, 0.0, 1.0]);
+    position.push([-0.5 * SCALE, -0.5 * SCALE, 0.5 * SCALE]);
     uv.push([1.0, 0.0]);
     normal.push([0.0, -1.0, 0.0]);
     //vertex 23
-    position.push([0.0, 0.0, 0.0]);
+    position.push([-0.5 * SCALE, -0.5 * SCALE, -0.5 * SCALE]);
     uv.push([1.0, 1.0]);
     normal.push([0.0, -1.0, 0.0]);
 
