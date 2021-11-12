@@ -7,6 +7,7 @@ use bevy::{
 mod finite_solver;
 mod my_solver;
 mod uv_show;
+const WATER_SCALE: f32 = 0.1;
 
 use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
@@ -23,7 +24,10 @@ impl Plugin for WaterPlugin {
         .add_system_set(
             SystemSet::on_update(GameState::Playing).with_system(water_simulation.system()),
         )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_water.system()));
+        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_water.system()))
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing).with_system(uv_show::run_uv_cubes.system()),
+        );
     }
 }
 /// solver for water
@@ -185,8 +189,8 @@ fn spawn_water_system(
     let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
-    let mut transform = Transform::from_translation(Vec3::new(0.3, 0.5, 0.3));
-    transform.scale = Vec3::new(0.1, 0.1, 0.1);
+    let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
+    transform.scale = Vec3::new(WATER_SCALE, WATER_SCALE, WATER_SCALE);
     let info: Vec<SolveInfo> = vec![];
     commands
         .spawn_bundle(PbrBundle {
