@@ -25,7 +25,11 @@ fn spawn_camera(mut commands: Commands) {
     let target = Vec3::ZERO;
     commands
         .spawn_bundle(OrbitCameraBundle::new(
-            OrbitCameraController::default(),
+            OrbitCameraController {
+                mouse_translate_sensitivity: Vec2::splat(0.001),
+                mouse_wheel_zoom_sensitivity: 0.002,
+                ..Default::default()
+            },
             PerspectiveCameraBundle::default(),
             eye,
             target,

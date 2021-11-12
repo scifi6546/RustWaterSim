@@ -7,10 +7,17 @@ use bevy::{
 mod finite_solver;
 mod my_solver;
 mod uv_show;
+/// size in x direction of water surface
+/// Does not depend on mesh resolution
+const WATER_SIZE: f32 = 6.0;
 const WATER_SCALE: f32 = 0.1;
+const HEIGHT_MULTIPLIER: f32 = 10.0;
 
 use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
+pub struct WaterScale {
+    scale: f32,
+}
 
 pub struct WaterPlugin;
 impl Plugin for WaterPlugin {
@@ -31,7 +38,6 @@ impl Plugin for WaterPlugin {
     }
 }
 /// solver for water
-const HEIGHT_MULTIPLIER: f32 = 10.0;
 pub trait Solver: Send + Sync + 'static {
     /// builds solver
     /// runs water simulation and outputs water heights
@@ -178,20 +184,16 @@ fn spawn_water_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mut heights_data = vec![0.0; 100 * 100];
-    heights_data[50 * 50 + 50] = 1.0;
-    let water_heights = Grid::from_vec(Vector2::new(100, 100), heights_data);
-    let velocities = Grid::from_vec(
-        Vector2::new(101, 101),
-        vec![Vector2::new(0.0, 0.0); 101 * 101],
-    );
     //let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
-    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::dynamic_droplet());
+    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
+    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::dynamic_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
-    transform.scale = Vec3::new(WATER_SCALE, WATER_SCALE, WATER_SCALE);
+    let scale = WATER_SIZE / water.h().x() as f32;
+    info!("transform scale: {}", scale);
+
+    transform.scale = Vec3::new(scale, scale, scale);
     let info: Vec<SolveInfo> = vec![];
     commands
         .spawn_bundle(PbrBundle {
@@ -202,6 +204,7 @@ fn spawn_water_system(
         })
         .insert(water)
         .insert(info)
+        .insert(WaterScale { scale })
         .insert(WaterMarker);
 }
 fn water_simulation(

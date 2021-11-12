@@ -1,4 +1,4 @@
-use super::{Solver, WATER_SCALE};
+use super::{Solver, WATER_SCALE, WATER_SIZE};
 use crate::prelude::GuiState;
 use bevy::{
     prelude::*,
@@ -311,6 +311,8 @@ pub fn run_uv_cubes(
         return;
     }
     let water = water.unwrap();
+    let multiplier = WATER_SIZE / water.h().x() as f32;
+
     for (mut mesh, mut visible) in u_cubes.iter_mut() {
         if !gui_state.show_velocities {
             visible.is_visible = false;
@@ -326,7 +328,7 @@ pub fn run_uv_cubes(
             for y in 0..u.y() {
                 append_cube(
                     &mut mesh,
-                    Vec3::new(x as f32 * WATER_SCALE, 1.0, (y as f32 + 0.5) * WATER_SCALE),
+                    Vec3::new(x as f32 * multiplier, 1.0, (y as f32 + 0.5) * multiplier),
                     CUBE_SCALE,
                     u.get(x, y) * Y_SCALE,
                 );
@@ -349,11 +351,7 @@ pub fn run_uv_cubes(
             for y in 0..v.y() {
                 append_cube(
                     &mut mesh,
-                    Vec3::new(
-                        (x as f32 + 0.5) * WATER_SCALE,
-                        1.0,
-                        (y as f32) * WATER_SCALE,
-                    ),
+                    Vec3::new((x as f32 + 0.5) * multiplier, 1.0, (y as f32) * multiplier),
                     CUBE_SCALE,
                     v.get(x, y) * Y_SCALE,
                 );
