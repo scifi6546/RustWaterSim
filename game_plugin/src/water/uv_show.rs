@@ -53,39 +53,37 @@ pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f
         VertexAttributeValues::Float3(v) => v,
         _ => panic!("invalid vertex type"),
     };
+    // face 0
 
-    position.push(
-        // face 0
-        [
-            0.5 * box_scale + x,
-            -0.5 * box_scale + y,
-            0.5 * box_scale + z,
-        ],
-        [
-            0.5 * box_scale + x,
-            -0.5 * box_scale + y,
-            -0.5 * box_scale + z,
-        ],
-        [0.5 * box_scale + x, y * box_scale + y, -0.5 * box_scale + z],
-        [0.5 * box_scale + x, y * box_scale + y, 0.5 * box_scale + z],
-        // face 1
-        [
-            0.5 * box_scale + x,
-            -0.5 * box_scale + y,
-            -0.5 * box_scale + z,
-        ],
-        [
-            -0.5 * box_scale + x,
-            -0.5 * box_scale + y,
-            -0.5 * box_scale + z,
-        ],
-        [0.5 * box_scale + x, y * box_scale + y, -0.5 * box_scale + z],
-        [
-            -0.5 * box_scale + x,
-            height * box_scale + y,
-            -0.5 * box_scale + z,
-        ],
-    );
+    position.push([
+        0.5 * box_scale + x,
+        -0.5 * box_scale + y,
+        0.5 * box_scale + z,
+    ]);
+    position.push([
+        0.5 * box_scale + x,
+        -0.5 * box_scale + y,
+        -0.5 * box_scale + z,
+    ]);
+    position.push([0.5 * box_scale + x, y * box_scale + y, -0.5 * box_scale + z]);
+    position.push([0.5 * box_scale + x, y * box_scale + y, 0.5 * box_scale + z]);
+    //face 1
+    position.push([
+        0.5 * box_scale + x,
+        -0.5 * box_scale + y,
+        -0.5 * box_scale + z,
+    ]);
+    position.push([
+        -0.5 * box_scale + x,
+        -0.5 * box_scale + y,
+        -0.5 * box_scale + z,
+    ]);
+    position.push([0.5 * box_scale + x, y * box_scale + y, -0.5 * box_scale + z]);
+    position.push([
+        -0.5 * box_scale + x,
+        height * box_scale + y,
+        -0.5 * box_scale + z,
+    ]);
     // face 2
     position.push([
         -0.5 * box_scale + x,
