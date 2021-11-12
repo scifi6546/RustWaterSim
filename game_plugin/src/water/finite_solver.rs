@@ -6,7 +6,12 @@ use super::{Grid, SolveInfo, Solver};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::f32::consts::PI;
-/// Water Source, dymaically adds droplet inorder to create pretty waves
+/// Axis aligned bounding box
+pub struct AABBBArrier {
+    pub top_right: Vector2<usize>,
+    pub bottom_left: Vector2<usize>,
+}
+/// Water Source, dynamically adds droplet in order to create pretty waves
 pub struct Source {
     /// center of source
     center: Vector2<f32>,
@@ -61,7 +66,7 @@ pub struct FiniteSolver {
 impl Solver for FiniteSolver {
     fn solve(&mut self) -> (&Grid<f32>, Vec<SolveInfo>) {
         let mut max_delta = 0.0;
-        for _ in 0..10 {
+        for _ in 0..Self::NUM_STEPS_PER_FRAME {
             //Self::update_velocity(&self.h, &mut self.u, &mut self.v, Self::DT);
             //let old_h = self.h.clone();
             //let delta = Self::update_heights(&old_h, &mut self.h, &self.u, &self.v, Self::DT);
@@ -99,6 +104,7 @@ impl Solver for FiniteSolver {
     }
 }
 impl FiniteSolver {
+    const NUM_STEPS_PER_FRAME: usize = 2;
     const DX: f32 = 999.0;
     const DY: f32 = 999.0;
     const G: f32 = 9.81;
@@ -248,25 +254,25 @@ impl FiniteSolver {
         }
     }
     pub fn dynamic_droplet() -> Self {
-        let h = Grid::from_fn(|_, _| 2.0, Vector2::new(100, 100));
-        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
-        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
+        let h = Grid::from_fn(|_, _| 2.0, Vector2::new(300, 300));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(301, 300));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(300, 301));
         Self {
             h,
             u,
             v,
             sources: vec![
                 Source {
-                    center: Vector2::new(75.0, 50.0),
+                    center: Vector2::new(160.0, 150.0),
                     height: 2.2,
-                    radius: 10.0,
-                    period: 600.0,
+                    radius: 5.0,
+                    period: 400.0,
                 },
                 Source {
-                    center: Vector2::new(25.0, 50.0),
+                    center: Vector2::new(140.0, 150.0),
                     height: 2.2,
-                    radius: 10.0,
-                    period: 600.0,
+                    radius: 5.0,
+                    period: 400.0,
                 },
             ],
             t: 0,
