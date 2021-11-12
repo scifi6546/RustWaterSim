@@ -3,8 +3,44 @@
 ///  - When having circle there is interference that breaks the model  
 ///     propagating backwards from wave front
 use super::{Grid, SolveInfo, Solver};
+use bevy::prelude::*;
 use nalgebra::Vector2;
-use std::cmp::max;
+use std::f32::consts::PI;
+/// Water Source, dymaically adds droplet inorder to create pretty waves
+pub struct Source {
+    /// center of source
+    center: Vector2<f32>,
+    /// radius of cone
+    radius: f32,
+    /// height of added cone
+    height: f32,
+    /// period in number of timesteps of pattern
+    period: f32,
+}
+impl Source {
+    pub fn change_h(&self, height: &mut Grid<f32>, t: u32) {
+        let t_i = t;
+        let t = t as f32;
+        let s = (2.0 * PI * t / self.period).sin();
+        if t_i % 10 == 0 {
+            info!("s: {}", s);
+        }
+
+        for x in 0..height.x() {
+            for y in 0..height.y() {
+                let distance = ((x as f32 - self.center.x).powi(2)
+                    + (y as f32 - self.center.y).powi(2))
+                .sqrt();
+                let dh = if distance < self.radius {
+                    self.height * (self.radius - distance) / self.radius
+                } else {
+                    0.0
+                };
+                *height.get_mut(x, y) += s * dh / self.period;
+            }
+        }
+    }
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum BoundryType {
     Source,
@@ -17,6 +53,10 @@ pub struct FiniteSolver {
     u: Grid<f32>,
     /// v velocity
     v: Grid<f32>,
+    /// time counter
+    t: u32,
+    /// sources to be added at runtime
+    sources: Vec<Source>,
 }
 impl Solver for FiniteSolver {
     fn solve(&mut self) -> (&Grid<f32>, Vec<SolveInfo>) {
@@ -67,6 +107,9 @@ impl FiniteSolver {
     const BOUNDRY: BoundryType = BoundryType::Reflection;
     /// Returns max displacement in timestep
     pub fn time_step(&mut self) -> f32 {
+        for source in self.sources.iter() {
+            source.change_h(&mut self.h, self.t);
+        }
         let mut u_half = self.u.clone();
         let mut v_half = self.v.clone();
         let half_uv = Self::update_velocity(&self.h, &mut u_half, &mut v_half, Self::DT / 2.0);
@@ -74,6 +117,7 @@ impl FiniteSolver {
         Self::update_heights(&self.h, &mut half_h, &self.u, &self.v, Self::DT / 2.0);
 
         Self::update_velocity(&half_h, &mut self.u, &mut self.v, Self::DT);
+        self.t += 1;
         Self::update_heights(&half_h, &mut self.h, &self.u, &self.v, Self::DT)
     }
     fn update_velocity(heights: &Grid<f32>, u: &mut Grid<f32>, v: &mut Grid<f32>, delta_t: f32) {
@@ -195,7 +239,38 @@ impl FiniteSolver {
         );
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
-        Self { h, u, v }
+        Self {
+            h,
+            u,
+            v,
+            sources: vec![],
+            t: 0,
+        }
+    }
+    pub fn dynamic_droplet() -> Self {
+        let h = Grid::from_fn(|_, _| 2.0, Vector2::new(100, 100));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
+        Self {
+            h,
+            u,
+            v,
+            sources: vec![
+                Source {
+                    center: Vector2::new(75.0, 50.0),
+                    height: 2.2,
+                    radius: 10.0,
+                    period: 600.0,
+                },
+                Source {
+                    center: Vector2::new(25.0, 50.0),
+                    height: 2.2,
+                    radius: 10.0,
+                    period: 600.0,
+                },
+            ],
+            t: 0,
+        }
     }
     pub fn big_droplet() -> Self {
         let h = Grid::from_fn(
@@ -216,7 +291,13 @@ impl FiniteSolver {
         );
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(251, 250));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(250, 251));
-        Self { h, u, v }
+        Self {
+            h,
+            u,
+            v,
+            sources: vec![],
+            t: 0,
+        }
     }
     pub fn wave_wall() -> Self {
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
@@ -235,6 +316,12 @@ impl FiniteSolver {
             },
             Vector2::new(100, 100),
         );
-        Self { u, v, h }
+        Self {
+            u,
+            v,
+            h,
+            sources: vec![],
+            t: 0,
+        }
     }
 }
