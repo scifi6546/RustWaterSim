@@ -200,20 +200,22 @@ impl FiniteSolver {
     pub fn big_droplet() -> Self {
         let h = Grid::from_fn(
             |x, y| {
+                let floor = 5.0;
                 let droplet_size = 50.0;
-                let drop_x = 500.0;
-                let drop_y = 500.0;
+                let height = 10.0;
+                let drop_x = 125.0;
+                let drop_y = 125.0;
                 let r = ((x as f32 - drop_x).powi(2) + (y as f32 - drop_x).powi(2)).sqrt();
                 if r <= droplet_size {
-                    (droplet_size - r) / droplet_size
+                    height * (droplet_size - r) / droplet_size + floor
                 } else {
-                    0.0
+                    floor
                 }
             },
-            Vector2::new(500, 500),
+            Vector2::new(250, 250),
         );
-        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(501, 500));
-        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(500, 501));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(251, 250));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(250, 251));
         Self { h, u, v }
     }
     pub fn wave_wall() -> Self {
