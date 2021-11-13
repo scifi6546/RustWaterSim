@@ -1,6 +1,7 @@
 mod actions;
 mod audio;
 mod game_menu;
+mod input;
 mod loading;
 mod menu;
 mod player;
@@ -42,6 +43,7 @@ impl Plugin for GamePlugin {
             .add_plugin(LoadingPlugin)
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
+            .add_plugin(input::CameraInput)
             .add_plugin(InternalAudioPlugin)
             .add_plugin(LookTransformPlugin)
             .add_plugin(OrbitCameraPlugin)

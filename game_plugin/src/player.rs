@@ -23,11 +23,14 @@ impl Plugin for PlayerPlugin {
 fn spawn_camera(mut commands: Commands) {
     let eye = Vec3::new(-2.0, 2.5, 5.0);
     let target = Vec3::ZERO;
+    let mouse_wheel_zoom_sensitivity = 0.02;
+    #[cfg(target_family = "wasm")]
+    let mouse_wheel_zoom_sensitivity = 0.002;
     commands
         .spawn_bundle(OrbitCameraBundle::new(
             OrbitCameraController {
                 mouse_translate_sensitivity: Vec2::splat(0.001),
-                mouse_wheel_zoom_sensitivity: 0.002,
+                mouse_wheel_zoom_sensitivity,
                 ..Default::default()
             },
             PerspectiveCameraBundle::default(),
