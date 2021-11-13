@@ -8,8 +8,24 @@ use nalgebra::Vector2;
 use std::f32::consts::PI;
 /// Axis aligned bounding box
 pub struct AABBBArrier {
-    pub top_right: Vector2<usize>,
-    pub bottom_left: Vector2<usize>,
+    pub top_right: Vector2<i32>,
+    pub bottom_left: Vector2<i32>,
+}
+impl AABBBArrier {
+    pub fn contains_point(&self, x: i32, y: i32) -> bool {
+        self.top_right.x >= x
+            && self.top_right.y >= y
+            && self.bottom_left.x <= x
+            && self.bottom_left.y <= y
+    }
+}
+fn vec_contains_point(boxes: &[AABBBArrier], x: i32, y: i32) -> bool {
+    for barrier in boxes.iter() {
+        if barrier.contains_point(x, y) {
+            return true;
+        }
+    }
+    return false;
 }
 /// Water Source, dynamically adds droplet in order to create pretty waves
 pub struct Source {
@@ -62,6 +78,8 @@ pub struct FiniteSolver {
     t: u32,
     /// sources to be added at runtime
     sources: Vec<Source>,
+    /// barriers in scene
+    barriers: Vec<AABBBArrier>,
 }
 impl Solver for FiniteSolver {
     fn solve(&mut self) -> (&Grid<f32>, Vec<SolveInfo>) {
@@ -118,21 +136,51 @@ impl FiniteSolver {
         }
         let mut u_half = self.u.clone();
         let mut v_half = self.v.clone();
-        let half_uv = Self::update_velocity(&self.h, &mut u_half, &mut v_half, Self::DT / 2.0);
+        let half_uv = Self::update_velocity(
+            &self.h,
+            &mut u_half,
+            &mut v_half,
+            Self::DT / 2.0,
+            &self.barriers,
+        );
         let mut half_h = self.h.clone();
-        Self::update_heights(&self.h, &mut half_h, &self.u, &self.v, Self::DT / 2.0);
+        Self::update_heights(
+            &self.h,
+            &mut half_h,
+            &self.u,
+            &self.v,
+            Self::DT / 2.0,
+            &self.barriers,
+        );
 
-        Self::update_velocity(&half_h, &mut self.u, &mut self.v, Self::DT);
+        Self::update_velocity(&half_h, &mut self.u, &mut self.v, Self::DT, &self.barriers);
         self.t += 1;
-        Self::update_heights(&half_h, &mut self.h, &self.u, &self.v, Self::DT)
+        Self::update_heights(
+            &half_h,
+            &mut self.h,
+            &self.u,
+            &self.v,
+            Self::DT,
+            &self.barriers,
+        )
     }
-    fn update_velocity(heights: &Grid<f32>, u: &mut Grid<f32>, v: &mut Grid<f32>, delta_t: f32) {
+    fn update_velocity(
+        heights: &Grid<f32>,
+        u: &mut Grid<f32>,
+        v: &mut Grid<f32>,
+        delta_t: f32,
+        boxes: &[AABBBArrier],
+    ) {
         for x in 0..heights.x() + 1 {
             for y in 0..heights.y() + 1 {
                 if x != 0 && y != 0 {
                     //handling u
                     if y < heights.y() {
-                        if x == 0 || x == heights.x() {
+                        if x == 0
+                            || x == heights.x()
+                            || vec_contains_point(&boxes, x as i32, y as i32)
+                            || vec_contains_point(&boxes, x as i32 - 1, y as i32)
+                        {
                             *u.get_mut(x, y) = 0.0;
                         } else {
                             let hxn1 = heights.get(x - 1, y);
@@ -142,7 +190,11 @@ impl FiniteSolver {
                         }
                     }
                     if x < heights.x() {
-                        if y == 0 || y == heights.y() {
+                        if y == 0
+                            || y == heights.y()
+                            || vec_contains_point(&boxes, x as i32, y as i32)
+                            || vec_contains_point(&boxes, x as i32, y as i32 - 1)
+                        {
                             *v.get_mut(x, y) = 0.0;
                         } else {
                             let hyn1 = heights.get(x, y - 1);
@@ -161,6 +213,7 @@ impl FiniteSolver {
         u: &Grid<f32>,
         v: &Grid<f32>,
         delta_t: f32,
+        boxes: &[AABBBArrier],
     ) -> f32 {
         let mut max_delta = 0.0;
         for x in 0..h.x() {
@@ -186,7 +239,7 @@ impl FiniteSolver {
                 let h0 = h.get(x, y);
                 let mut dx = 0.0;
                 //lower x boundry
-                if x >= 1 {
+                if x >= 1 || !vec_contains_point(&boxes, x as i32 - 1, y as i32) {
                     dx += un1 * (hxn1 + h0) / 2.0;
                 } else {
                     match Self::BOUNDRY {
@@ -195,7 +248,7 @@ impl FiniteSolver {
                     }
                 }
                 // upper x boundry
-                if x <= h.x() - 2 {
+                if x <= h.x() - 2 || !vec_contains_point(&boxes, x as i32 + 1, y as i32) {
                     dx -= up1 * (hxp1 + h0) / 2.0;
                 } else {
                     match Self::BOUNDRY {
@@ -207,7 +260,7 @@ impl FiniteSolver {
                 //let dx = un1 * (hxn1 + h0) / 2.0 - up1 * (hxp1 + h0) / 2.0;
                 let mut dy = 0.0;
                 //lower y boundry
-                if y >= 1 {
+                if y >= 1 || !vec_contains_point(&boxes, x as i32, y as i32 - 1) {
                     dy += vn1 * (hyn1 + h0) / 2.0;
                 } else {
                     match Self::BOUNDRY {
@@ -216,7 +269,7 @@ impl FiniteSolver {
                     }
                 }
                 // upper y boundry
-                if y <= h.y() - 2 {
+                if y <= h.y() - 2 || !vec_contains_point(&boxes, x as i32, y as i32 + 1) {
                     dy -= vp1 * (hyp1 + h0) / 2.0;
                 } else {
                     match Self::BOUNDRY {
@@ -251,6 +304,7 @@ impl FiniteSolver {
             v,
             sources: vec![],
             t: 0,
+            barriers: vec![],
         }
     }
     pub fn dynamic_droplet() -> Self {
@@ -276,6 +330,7 @@ impl FiniteSolver {
                 },
             ],
             t: 0,
+            barriers: vec![],
         }
     }
     pub fn big_droplet() -> Self {
@@ -303,6 +358,7 @@ impl FiniteSolver {
             v,
             sources: vec![],
             t: 0,
+            barriers: vec![],
         }
     }
     pub fn wave_wall() -> Self {
@@ -328,6 +384,43 @@ impl FiniteSolver {
             h,
             sources: vec![],
             t: 0,
+            barriers: vec![],
+        }
+    }
+    pub fn barrier() -> Self {
+        let h = Grid::from_fn(
+            |x, y| {
+                let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
+                if r <= 10.0 {
+                    (10.0 - r) / 10.0 + 1.0
+                } else {
+                    1.0
+                }
+            },
+            Vector2::new(100, 200),
+        );
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 200));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 201));
+        Self {
+            h,
+            u,
+            v,
+            sources: vec![],
+            t: 0,
+            barriers: vec![
+                AABBBArrier {
+                    top_right: Vector2::new(30, 80),
+                    bottom_left: Vector2::new(-10, 70),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(60, 80),
+                    bottom_left: Vector2::new(40, 70),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(110, 80),
+                    bottom_left: Vector2::new(70, 70),
+                },
+            ],
         }
     }
 }

@@ -228,8 +228,16 @@ fn show_velocity_button(
                     *material = button_materials.normal.clone();
                 }
             }
-            Interaction::Hovered => {}
-            Interaction::None => {}
+            Interaction::Hovered => {
+                if !gui_state.show_velocities {
+                    *material = button_materials.hovered.clone();
+                }
+            }
+            Interaction::None => {
+                if gui_state.show_velocities {
+                    *material = button_materials.pressed.clone();
+                }
+            }
         }
     }
     for (interation, mut material, children) in queries.q1_mut().iter_mut() {
@@ -242,8 +250,16 @@ fn show_velocity_button(
                     *material = button_materials.normal.clone();
                 }
             }
-            Interaction::Hovered => {}
-            Interaction::None => {}
+            Interaction::Hovered => {
+                if !gui_state.show_water {
+                    *material = button_materials.hovered.clone();
+                }
+            }
+            Interaction::None => {
+                if gui_state.show_water {
+                    *material = button_materials.pressed.clone();
+                }
+            }
         }
     }
 }

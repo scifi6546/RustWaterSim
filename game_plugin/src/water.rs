@@ -11,7 +11,7 @@ mod uv_show;
 /// Does not depend on mesh resolution
 const WATER_SIZE: f32 = 6.0;
 const WATER_SCALE: f32 = 0.1;
-const HEIGHT_MULTIPLIER: f32 = 10.0;
+const HEIGHT_MULTIPLIER: f32 = 30.0;
 
 use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
@@ -46,7 +46,7 @@ pub trait Solver: Send + Sync + 'static {
     fn build_mesh(&mut self) -> Mesh {
         let (water, solve_info) = self.solve();
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        update_mesh(water, &mut mesh);
+        build_mesh(water, &mut mesh);
         return mesh;
     }
     /// output refrence to h data
@@ -60,7 +60,7 @@ pub struct SolveInfo {
     pub name: &'static str,
     pub data: String,
 }
-fn update_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
+fn build_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
     let mut position = vec![];
     let mut normals = vec![];
     let mut uvs = vec![];
@@ -185,7 +185,8 @@ fn spawn_water_system(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     //let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
-    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
+    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
+    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::barrier());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::dynamic_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
@@ -222,8 +223,9 @@ fn water_simulation(
 ) {
     for (_, mut water, mesh, mut info) in water_query.iter_mut() {
         let (heights, out_info) = water.solve();
+
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
-        update_mesh(heights, &mut mesh);
+        build_mesh(heights, &mut mesh);
         *info = out_info;
     }
 }
