@@ -1,4 +1,4 @@
-use crate::prelude::GuiState;
+use crate::prelude::{GuiState, SelectStartupInfo};
 use crate::GameState;
 use bevy::{
     prelude::*,
@@ -182,14 +182,17 @@ pub struct WaterMarker;
 fn spawn_water_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     //let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
-    let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::barrier());
+    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::barrier());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::dynamic_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
+    let water_fn = CONDITIONS[startup_info.index].build_water_fn;
+    let mut water = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.h().x() as f32;
     info!("transform scale: {}", scale);
@@ -208,6 +211,32 @@ fn spawn_water_system(
         .insert(WaterScale { scale })
         .insert(WaterMarker);
 }
+pub struct InitialConditions {
+    pub name: &'static str,
+    pub build_water_fn: fn() -> Box<dyn Solver>,
+}
+pub const CONDITIONS: &[InitialConditions] = &[
+    InitialConditions {
+        name: "Double Slit",
+        build_water_fn: || Box::new(finite_solver::FiniteSolver::barrier()),
+    },
+    InitialConditions {
+        name: "Droplet",
+        build_water_fn: || Box::new(finite_solver::FiniteSolver::droplet()),
+    },
+    InitialConditions {
+        name: "Two Sources",
+        build_water_fn: || Box::new(finite_solver::FiniteSolver::dynamic_droplet()),
+    },
+    InitialConditions {
+        name: "Big Droplet (warning slow)",
+        build_water_fn: || Box::new(finite_solver::FiniteSolver::big_droplet()),
+    },
+    InitialConditions {
+        name: "Wall",
+        build_water_fn: || Box::new(finite_solver::FiniteSolver::wave_wall()),
+    },
+];
 fn water_simulation(
     _commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,

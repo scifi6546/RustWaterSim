@@ -61,7 +61,7 @@ fn build_ui(
     button_material: Res<ButtonMaterial>,
 ) {
     println!("building ui");
-    let mut gui_state = GuiState::default();
+    let gui_state = GuiState::default();
 
     commands
         .spawn_bundle(NodeBundle {

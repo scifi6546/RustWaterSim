@@ -20,7 +20,8 @@ use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPl
 use water::WaterPlugin;
 pub mod prelude {
     pub use super::game_menu::GuiState;
-    pub use super::water::{SolveInfo, Solver, WaterMarker};
+    pub use super::menu::SelectStartupInfo;
+    pub use super::water::{InitialConditions, SolveInfo, Solver, WaterMarker, CONDITIONS};
 }
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html
