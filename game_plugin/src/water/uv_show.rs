@@ -1,4 +1,4 @@
-use super::{FiniteSolver, WATER_SCALE, WATER_SIZE};
+use super::{FiniteSolver, WATER_SIZE};
 use crate::prelude::GuiState;
 use bevy::{
     prelude::*,

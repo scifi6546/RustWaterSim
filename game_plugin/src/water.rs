@@ -1,9 +1,6 @@
 use crate::prelude::{GuiState, SelectStartupInfo};
 use crate::GameState;
-use bevy::{
-    prelude::*,
-    render::{mesh::Indices, pipeline::PrimitiveTopology},
-};
+use bevy::{prelude::*, render::mesh::Indices};
 mod aabb;
 mod finite_solver;
 pub use finite_solver::{AABBBArrier, FiniteSolver};
@@ -11,7 +8,6 @@ mod uv_show;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
 const WATER_SIZE: f32 = 6.0;
-const WATER_SCALE: f32 = 0.1;
 const HEIGHT_MULTIPLIER: f32 = 30.0;
 
 use nalgebra::{Vector2, Vector3};
@@ -181,6 +177,8 @@ fn spawn_water_system(
 
     transform.scale = Vec3::new(scale, scale, scale);
     let info: Vec<SolveInfo> = vec![];
+    let mean_h = water.mean_height();
+    let water_dimensions = Vector2::new(water.h().x(), water.h().y());
     commands
         .spawn_bundle(PbrBundle {
             material: materials.add(Color::rgb(0.0, 0.5, 0.0).into()),
@@ -192,8 +190,17 @@ fn spawn_water_system(
         .insert(info)
         .insert(WaterScale { scale })
         .insert(WaterMarker);
+    let box_material = materials.add(Color::rgb(0.1, 0.1, 0.1).into());
     for barrier in barriers.drain(..) {
-        commands.spawn().insert(barrier);
+        commands
+            .spawn_bundle(aabb::build_cube_from_aabb(
+                &barrier,
+                box_material.clone(),
+                &mut meshes,
+                mean_h,
+                water_dimensions,
+            ))
+            .insert(barrier);
     }
 }
 pub struct InitialConditions {
@@ -248,7 +255,7 @@ fn water_simulation(
 /// Handles showing velocities and water
 fn show_water(
     mut water_query: Query<(&mut Transform, &mut Visible, &mut FiniteSolver), With<WaterMarker>>,
-    gui_query: Query<(&GuiState), Changed<GuiState>>,
+    gui_query: Query<&GuiState, Changed<GuiState>>,
 ) {
     let gui_state = gui_query.iter().next();
     if gui_state.is_none() {

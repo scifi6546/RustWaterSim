@@ -89,6 +89,16 @@ impl FiniteSolver {
     const DT: f32 = 0.1;
     const VISC: f32 = 0.0;
     const BOUNDRY: BoundryType = BoundryType::Reflection;
+    /// gets mean height of water
+    pub fn mean_height(&self) -> f32 {
+        let mut sum = 0.0;
+        for x in 0..self.h.x() {
+            for y in 0..self.h.y() {
+                sum += self.h.get(x, y) / (self.h.x() * self.h.y()) as f32
+            }
+        }
+        return sum;
+    }
     /// runs water simulation and outputs water heights
     pub fn solve(&mut self, boxes: &[AABBBArrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         let mut max_delta = 0.0;

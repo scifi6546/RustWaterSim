@@ -1,6 +1,35 @@
-use super::AABBBArrier;
+use super::{AABBBArrier, HEIGHT_MULTIPLIER, WATER_SIZE};
 use bevy::prelude::*;
-pub fn build_cube_from_aabb(aabb: &AABBBArrier) -> Mesh {
-    let shape_box = shape::Box::new(1.0, 1.0, 1.0);
-    shape_box.into()
+use nalgebra::Vector2;
+pub fn build_cube_from_aabb(
+    aabb: &AABBBArrier,
+    material: Handle<StandardMaterial>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    y: f32,
+    water_dimensions: Vector2<usize>,
+) -> PbrBundle {
+    let scaling = WATER_SIZE / water_dimensions.x as f32;
+    info!("y: {}", y * HEIGHT_MULTIPLIER * scaling);
+    info!("scaling: {}", scaling);
+
+    let mesh = meshes.add(shape::Cube::new(1.0).into());
+    let center_x = scaling * (aabb.top_right.x + aabb.bottom_left.x) as f32 / 2.0;
+    let center_z = scaling * (aabb.top_right.y + aabb.bottom_left.y) as f32 / 2.0;
+
+    let mut transform = Transform::from_translation(Vec3::new(
+        center_x,
+        y * HEIGHT_MULTIPLIER * scaling,
+        center_z,
+    ));
+
+    let scale_xz = (aabb.top_right - aabb.bottom_left);
+    let scale_xz = scaling * Vector2::new(scale_xz.x as f32, scale_xz.y as f32);
+    transform.scale = Vec3::new(scale_xz.x, 2.0, scale_xz.y);
+
+    PbrBundle {
+        mesh,
+        material,
+        transform,
+        ..Default::default()
+    }
 }
