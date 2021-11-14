@@ -2,24 +2,12 @@
 /// Current Wierdness:
 ///  - When having circle there is interference that breaks the model  
 ///     propagating backwards from wave front
-use super::{Grid, SolveInfo};
+use super::{AABBBArrier, Grid, SolveInfo};
 use bevy::{prelude::*, render::pipeline::PrimitiveTopology};
 use nalgebra::Vector2;
 use std::f32::consts::PI;
 /// Axis aligned bounding box
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct AABBBArrier {
-    pub top_right: Vector2<i32>,
-    pub bottom_left: Vector2<i32>,
-}
-impl AABBBArrier {
-    pub fn contains_point(&self, x: i32, y: i32) -> bool {
-        self.top_right.x >= x
-            && self.top_right.y >= y
-            && self.bottom_left.x <= x
-            && self.bottom_left.y <= y
-    }
-}
+
 fn vec_contains_point(boxes: &[AABBBArrier], x: i32, y: i32) -> bool {
     for barrier in boxes.iter() {
         if barrier.contains_point(x, y) {

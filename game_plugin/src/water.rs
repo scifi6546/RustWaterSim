@@ -3,7 +3,8 @@ use crate::GameState;
 use bevy::{prelude::*, render::mesh::Indices};
 mod aabb;
 mod finite_solver;
-pub use finite_solver::{AABBBArrier, FiniteSolver};
+use aabb::AABBBArrier;
+pub use finite_solver::FiniteSolver;
 mod uv_show;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution

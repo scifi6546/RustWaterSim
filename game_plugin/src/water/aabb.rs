@@ -1,6 +1,19 @@
-use super::{AABBBArrier, HEIGHT_MULTIPLIER, WATER_SIZE};
+use super::{HEIGHT_MULTIPLIER, WATER_SIZE};
 use bevy::prelude::*;
 use nalgebra::Vector2;
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct AABBBArrier {
+    pub top_right: Vector2<i32>,
+    pub bottom_left: Vector2<i32>,
+}
+impl AABBBArrier {
+    pub fn contains_point(&self, x: i32, y: i32) -> bool {
+        self.top_right.x >= x
+            && self.top_right.y >= y
+            && self.bottom_left.x <= x
+            && self.bottom_left.y <= y
+    }
+}
 pub fn build_cube_from_aabb(
     aabb: &AABBBArrier,
     material: Handle<StandardMaterial>,
@@ -9,9 +22,6 @@ pub fn build_cube_from_aabb(
     water_dimensions: Vector2<usize>,
 ) -> PbrBundle {
     let scaling = WATER_SIZE / water_dimensions.x as f32;
-    info!("y: {}", y * HEIGHT_MULTIPLIER * scaling);
-    info!("scaling: {}", scaling);
-
     let mesh = meshes.add(shape::Cube::new(1.0).into());
     let center_x = scaling * (aabb.top_right.x + aabb.bottom_left.x) as f32 / 2.0;
     let center_z = scaling * (aabb.top_right.y + aabb.bottom_left.y) as f32 / 2.0;
