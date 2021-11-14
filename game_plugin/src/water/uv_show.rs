@@ -1,4 +1,4 @@
-use super::{Solver, WATER_SCALE, WATER_SIZE};
+use super::{FiniteSolver, WATER_SCALE, WATER_SIZE};
 use crate::prelude::GuiState;
 use bevy::{
     prelude::*,
@@ -290,7 +290,7 @@ pub fn run_uv_cubes(
     mut mesh_assets: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     gui_query: Query<&GuiState>,
-    water_query: Query<&Box<dyn Solver>, ()>,
+    water_query: Query<&FiniteSolver, ()>,
     mut queries: QuerySet<(
         Query<(&Handle<Mesh>, &mut Visible), With<UShow>>,
         Query<(&Handle<Mesh>, &mut Visible), With<VShow>>,

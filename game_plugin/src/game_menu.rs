@@ -1,4 +1,4 @@
-use crate::prelude::{SolveInfo, Solver, WaterMarker};
+use crate::prelude::{FiniteSolver, SolveInfo, WaterMarker};
 use crate::GameState;
 use bevy::prelude::*;
 struct GameMenu;
@@ -280,7 +280,7 @@ fn solve_info(
 }
 fn run_ui(
     mut _commands: Commands,
-    water_query: Query<&Box<dyn Solver>, With<WaterMarker>>,
+    water_query: Query<&FiniteSolver, With<WaterMarker>>,
     mut query: Query<&mut Text, With<ViscocityChange>>,
 ) {
     let viscosity = water_query

@@ -1,5 +1,5 @@
 use crate::loading::FontAssets;
-use crate::prelude::{InitialConditions, CONDITIONS};
+use crate::prelude::CONDITIONS;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -40,7 +40,6 @@ pub struct SelectStartupInfo {
     pub name: String,
 }
 struct SelectStartup;
-struct PlayButton;
 
 fn setup_menu(
     mut commands: Commands,
@@ -101,24 +100,16 @@ fn setup_menu(
         });
 }
 
-type ButtonInteraction<'a> = (
-    Entity,
-    &'a Interaction,
-    &'a mut Handle<ColorMaterial>,
-    &'a Children,
-);
 fn conditions_button(
     mut commands: Commands,
     button_materials: Res<ButtonMaterials>,
     mut state: ResMut<State<GameState>>,
     mut interaction_query: Query<
-        (ButtonInteraction, &SelectStartupInfo),
+        (&Interaction, &mut Handle<ColorMaterial>, &SelectStartupInfo),
         (Changed<Interaction>, With<Button>, With<SelectStartup>),
     >,
-    text_query: Query<Entity, With<Text>>,
 ) {
-    for ((button, interaction, mut material, children), select_info) in interaction_query.iter_mut()
-    {
+    for (interaction, mut material, select_info) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
                 info!("clicked");

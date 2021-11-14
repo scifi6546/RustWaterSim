@@ -4,8 +4,9 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, pipeline::PrimitiveTopology},
 };
+mod aabb;
 mod finite_solver;
-mod my_solver;
+pub use finite_solver::{AABBBArrier, FiniteSolver};
 mod uv_show;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
@@ -13,7 +14,6 @@ const WATER_SIZE: f32 = 6.0;
 const WATER_SCALE: f32 = 0.1;
 const HEIGHT_MULTIPLIER: f32 = 30.0;
 
-use my_solver::MySolver;
 use nalgebra::{Vector2, Vector3};
 pub struct WaterScale {
     scale: f32,
@@ -37,25 +37,7 @@ impl Plugin for WaterPlugin {
         );
     }
 }
-/// solver for water
-pub trait Solver: Send + Sync + 'static {
-    /// builds solver
-    /// runs water simulation and outputs water heights
-    fn solve(&mut self) -> (&Grid<f32>, Vec<SolveInfo>);
-    /// Builds mesh from grid, todo: make water sim inplace for performance reasons
-    fn build_mesh(&mut self) -> Mesh {
-        let (water, solve_info) = self.solve();
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        build_mesh(water, &mut mesh);
-        return mesh;
-    }
-    /// output refrence to h data
-    fn h(&self) -> &Grid<f32>;
-    /// output velocity in x direction grid
-    fn u(&self) -> &Grid<f32>;
-    /// output velocity in y direction grid
-    fn v(&self) -> &Grid<f32>;
-}
+
 pub struct SolveInfo {
     pub name: &'static str,
     pub data: String,
@@ -192,7 +174,7 @@ fn spawn_water_system(
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
     //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
     let water_fn = CONDITIONS[startup_info.index].build_water_fn;
-    let mut water = water_fn();
+    let (mut water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.h().x() as f32;
     info!("transform scale: {}", scale);
@@ -203,38 +185,41 @@ fn spawn_water_system(
         .spawn_bundle(PbrBundle {
             material: materials.add(Color::rgb(0.0, 0.5, 0.0).into()),
             transform: transform,
-            mesh: meshes.add(water.build_mesh()),
+            mesh: meshes.add(water.build_mesh(&barriers)),
             ..Default::default()
         })
         .insert(water)
         .insert(info)
         .insert(WaterScale { scale })
         .insert(WaterMarker);
+    for barrier in barriers.drain(..) {
+        commands.spawn().insert(barrier);
+    }
 }
 pub struct InitialConditions {
     pub name: &'static str,
-    pub build_water_fn: fn() -> Box<dyn Solver>,
+    pub build_water_fn: fn() -> (FiniteSolver, Vec<AABBBArrier>),
 }
 pub const CONDITIONS: &[InitialConditions] = &[
     InitialConditions {
         name: "Double Slit",
-        build_water_fn: || Box::new(finite_solver::FiniteSolver::barrier()),
+        build_water_fn: || finite_solver::FiniteSolver::barrier(),
     },
     InitialConditions {
         name: "Droplet",
-        build_water_fn: || Box::new(finite_solver::FiniteSolver::droplet()),
+        build_water_fn: || finite_solver::FiniteSolver::droplet(),
     },
     InitialConditions {
         name: "Two Sources",
-        build_water_fn: || Box::new(finite_solver::FiniteSolver::dynamic_droplet()),
+        build_water_fn: || finite_solver::FiniteSolver::dynamic_droplet(),
     },
     InitialConditions {
         name: "Big Droplet (warning slow)",
-        build_water_fn: || Box::new(finite_solver::FiniteSolver::big_droplet()),
+        build_water_fn: || finite_solver::FiniteSolver::big_droplet(),
     },
     InitialConditions {
         name: "Wall",
-        build_water_fn: || Box::new(finite_solver::FiniteSolver::wave_wall()),
+        build_water_fn: || finite_solver::FiniteSolver::wave_wall(),
     },
 ];
 fn water_simulation(
@@ -243,15 +228,17 @@ fn water_simulation(
     mut water_query: Query<
         (
             &mut Transform,
-            &mut Box<dyn Solver>,
+            &mut FiniteSolver,
             &Handle<Mesh>,
             &mut Vec<SolveInfo>,
         ),
         With<WaterMarker>,
     >,
+    aabb_query: Query<&AABBBArrier, ()>,
 ) {
+    let aabb_vec = aabb_query.iter().copied().collect::<Vec<_>>();
     for (_, mut water, mesh, mut info) in water_query.iter_mut() {
-        let (heights, out_info) = water.solve();
+        let (heights, out_info) = water.solve(&aabb_vec);
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
         build_mesh(heights, &mut mesh);
@@ -260,7 +247,7 @@ fn water_simulation(
 }
 /// Handles showing velocities and water
 fn show_water(
-    mut water_query: Query<(&mut Transform, &mut Visible, &mut Box<dyn Solver>), With<WaterMarker>>,
+    mut water_query: Query<(&mut Transform, &mut Visible, &mut FiniteSolver), With<WaterMarker>>,
     gui_query: Query<(&GuiState), Changed<GuiState>>,
 ) {
     let gui_state = gui_query.iter().next();
