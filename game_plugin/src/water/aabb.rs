@@ -1,4 +1,4 @@
-use super::{HEIGHT_MULTIPLIER, WATER_SIZE};
+use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -62,4 +62,27 @@ pub fn build_barrier(
         .insert_bundle(bevy_mod_picking::PickableBundle::default())
         .insert(bevy_transform_gizmo::GizmoTransformable)
         .insert(aabb);
+}
+pub fn aabb_transform(
+    mut commands: Commands,
+    water_query: Query<&FiniteSolver, With<FiniteSolver>>,
+    mut box_query: Query<(&mut AABBBArrier, &Transform), Changed<Transform>>,
+) {
+    let water = if let Some(water) = water_query.iter().next() {
+        water
+    } else {
+        return;
+    };
+    let water_x = water.h().x();
+    let scaling = water_x as f32 / WATER_SIZE;
+    for (mut aabb, transform) in box_query.iter_mut() {
+        let lower = scaling * (transform.translation - 0.5 * transform.scale);
+        let upper = scaling * (transform.translation + 0.5 * transform.scale);
+        info!("transform: {}", scaling * transform.translation);
+        info!("lower x: {}, aabb: {}", lower.x, aabb.bottom_left.x);
+        info!("aabb before: {:?}", aabb);
+        aabb.bottom_left = Vector2::new(lower.x as i32, lower.z as i32);
+        aabb.top_right = Vector2::new(upper.x as i32, upper.z as i32);
+        info!("aabb after: {:?}", aabb);
+    }
 }

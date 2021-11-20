@@ -32,6 +32,7 @@ impl Plugin for WaterPlugin {
                 .after(CameraLabel)
                 .with_system(water_simulation.system())
                 .with_system(show_water.system())
+                .with_system(aabb::aabb_transform.system())
                 .with_system(uv_show::run_uv_cubes.system()),
         );
     }
