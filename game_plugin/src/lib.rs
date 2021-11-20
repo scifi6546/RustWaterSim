@@ -12,6 +12,7 @@ use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
 use bevy::app::AppBuilder;
+
 #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
@@ -21,6 +22,7 @@ use water::WaterPlugin;
 pub mod prelude {
     pub use super::game_menu::GuiState;
     pub use super::menu::SelectStartupInfo;
+    pub use super::player::CameraLabel;
     pub use super::water::{FiniteSolver, InitialConditions, SolveInfo, WaterMarker, CONDITIONS};
 }
 // This example game uses States to separate logic
@@ -41,6 +43,8 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_state(GameState::Loading)
+            .add_plugin(bevy_mod_picking::DefaultPickingPlugins)
+            .add_plugin(bevy_transform_gizmo::TransformGizmoPlugin)
             .add_plugin(LoadingPlugin)
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)

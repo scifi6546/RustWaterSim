@@ -14,7 +14,7 @@ impl AABBBArrier {
             && self.bottom_left.y <= y
     }
 }
-pub fn build_cube_from_aabb(
+fn build_cube_from_aabb(
     aabb: &AABBBArrier,
     material: Handle<StandardMaterial>,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -42,4 +42,24 @@ pub fn build_cube_from_aabb(
         transform,
         ..Default::default()
     }
+}
+pub fn build_barrier(
+    commands: &mut Commands,
+    aabb: AABBBArrier,
+    material: Handle<StandardMaterial>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    mean_h: f32,
+    water_dimensions: Vector2<usize>,
+) {
+    commands
+        .spawn_bundle(build_cube_from_aabb(
+            &aabb,
+            material,
+            meshes,
+            mean_h,
+            water_dimensions,
+        ))
+        .insert_bundle(bevy_mod_picking::PickableBundle::default())
+        .insert(bevy_transform_gizmo::GizmoTransformable)
+        .insert(aabb);
 }

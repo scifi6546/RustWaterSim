@@ -6,15 +6,20 @@ use smooth_bevy_cameras::controllers::orbit::{OrbitCameraBundle, OrbitCameraCont
 pub struct PlayerPlugin;
 
 pub struct Player;
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+pub struct CameraLabel;
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.add_system_set(
-            SystemSet::on_enter(GameState::Playing)
-                .with_system(spawn_player.system())
-                .with_system(spawn_camera.system()),
+            SystemSet::on_enter(GameState::Playing).with_system(spawn_player.system()),
+        )
+        .add_system_set(
+            SystemSet::on_enter(GameState::Menu)
+                .with_system(spawn_camera.system())
+                .label(CameraLabel),
         )
         .add_system_set(SystemSet::on_update(GameState::Playing).with_system(move_player.system()));
     }
@@ -37,7 +42,8 @@ fn spawn_camera(mut commands: Commands) {
             eye,
             target,
         ))
-        .insert(PerspectiveCameraBundle::default());
+        .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
+        .insert(bevy_transform_gizmo::GizmoPickSource::default());
 }
 
 fn spawn_player(mut commands: Commands) {
