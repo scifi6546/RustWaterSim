@@ -32,7 +32,7 @@ fn build_cube_from_aabb(
         center_z,
     ));
 
-    let scale_xz = (aabb.top_right - aabb.bottom_left);
+    let scale_xz = aabb.top_right - aabb.bottom_left;
     let scale_xz = scaling * Vector2::new(scale_xz.x as f32, scale_xz.y as f32);
     transform.scale = Vec3::new(scale_xz.x, 2.0, scale_xz.y);
 
@@ -64,7 +64,6 @@ pub fn build_barrier(
         .insert(aabb);
 }
 pub fn aabb_transform(
-    mut commands: Commands,
     water_query: Query<&FiniteSolver, With<FiniteSolver>>,
     mut box_query: Query<(&mut AABBBArrier, &Transform), Changed<Transform>>,
 ) {
