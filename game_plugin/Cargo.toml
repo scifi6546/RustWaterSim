@@ -12,8 +12,7 @@ default = [
     "bevy/bevy_gltf",
     "bevy/bevy_winit",
     "bevy/render",
-    "bevy/png",
-    "bevy_kira_audio/ogg"
+    "bevy/png"
 ]
 
 native = [
@@ -25,7 +24,5 @@ bevy = { version = "0.5.0", default-features = false }
 smooth-bevy-cameras = {path="../smooth-bevy-cameras"}
 bevy_transform_gizmo = {path="../bevy_transform_gizmo"}
 bevy_mod_picking = {path="../bevy_mod_picking"}
-bevy_kira_audio = { version = "0.6.0" }
 bevy_asset_loader = { version = "0.6.0" }
-rand = "0.8.3"
 nalgebra = "0.29.0"

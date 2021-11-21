@@ -12,8 +12,9 @@ opt-level = 3
 opt-level = 1
 
 [profile.release]
-lto = "fat"
+lto = true
 codegen-units = 1
+opt-level="s"
 
 [features]
 default = [

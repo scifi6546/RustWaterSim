@@ -1,5 +1,4 @@
 mod actions;
-mod audio;
 mod game_menu;
 mod input;
 mod loading;
@@ -7,7 +6,6 @@ mod menu;
 mod player;
 mod water;
 use crate::actions::ActionsPlugin;
-use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
@@ -49,7 +47,6 @@ impl Plugin for GamePlugin {
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(input::CameraInput)
-            .add_plugin(InternalAudioPlugin)
             .add_plugin(LookTransformPlugin)
             .add_plugin(OrbitCameraPlugin)
             .add_plugin(WaterPlugin)
