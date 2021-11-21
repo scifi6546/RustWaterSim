@@ -65,12 +65,10 @@ pub fn default_input_map(
         ))
     }
     if mouse_buttons.pressed(MouseButton::Left) {
-        info!("left pressed, delta: {}", cursor_delta);
         events.send(ControlEvent::Orbit(mouse_rotate_sensitivity * cursor_delta));
     }
 
     if mouse_buttons.pressed(MouseButton::Right) {
-        info!("right pressed");
         events.send(ControlEvent::TranslateTarget(
             mouse_translate_sensitivity * cursor_delta,
         ));

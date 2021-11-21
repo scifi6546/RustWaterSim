@@ -228,6 +228,7 @@ pub const CONDITIONS: &[InitialConditions] = &[
 fn water_simulation(
     _commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
+    gui_query: Query<&GuiState, With<GuiState>>,
     mut water_query: Query<
         (
             &mut Transform,
@@ -239,8 +240,19 @@ fn water_simulation(
     >,
     aabb_query: Query<&AABBBArrier, ()>,
 ) {
+    let gui_state = gui_query.iter().next();
+    if gui_state.is_none() {
+        return;
+    }
+    let gui_state = gui_state.unwrap();
+    if gui_state.water_speed == 0 {
+        return;
+    }
     let aabb_vec = aabb_query.iter().copied().collect::<Vec<_>>();
     for (_, mut water, mesh, mut info) in water_query.iter_mut() {
+        for i in 0..(gui_state.water_speed - 1) {
+            water.solve(&aabb_vec);
+        }
         let (heights, out_info) = water.solve(&aabb_vec);
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
