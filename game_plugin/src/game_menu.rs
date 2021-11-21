@@ -3,11 +3,41 @@ use crate::GameState;
 use bevy::prelude::*;
 struct GameMenu;
 pub struct GameMenuPlugin;
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+enum GuiLabel {
+    SidePanel,
+    BottomPanel,
+}
 impl Plugin for GameMenuPlugin {
     fn build(&self, app: &mut AppBuilder) {
         app.init_resource::<ButtonMaterial>();
         app.init_resource::<GuiState>();
-        app.add_system_set(SystemSet::on_enter(GameState::Playing).with_system(build_ui.system()));
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Playing)
+                .with_system(ui.system())
+                .label(GuiLabel::SidePanel),
+        );
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Playing)
+                .with_system(build_ui.system())
+                .label(GuiLabel::SidePanel),
+        );
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Playing).with_system(
+                build_play_bar
+                    .system()
+                    .label(GuiLabel::BottomPanel)
+                    .after(GuiLabel::SidePanel),
+            ),
+        );
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Playing).with_system(
+                build_play_bar
+                    .system()
+                    .label(GuiLabel::BottomPanel)
+                    .before(GuiLabel::SidePanel),
+            ),
+        );
         app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(run_ui.system()));
 
         app.add_system_set(
@@ -54,149 +84,209 @@ impl Default for GuiState {
 struct ShowVelocities;
 /// Marks show water
 struct ShowWater;
+fn ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    button_material: Res<ButtonMaterial>,
+) {
+    let gui_state = GuiState::default();
+    // root node
+    commands
+        .spawn_bundle(NodeBundle {
+            style: Style {
+                size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                justify_content: JustifyContent::FlexStart,
+                ..Default::default()
+            },
+            material: materials.add(Color::NONE.into()),
+            ..Default::default()
+        })
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(NodeBundle {
+                    style: Style {
+                        // size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
+                        border: Rect::all(Val::Px(3.0)),
+                        justify_content: JustifyContent::FlexStart,
+                        flex_direction: FlexDirection::ColumnReverse,
+                        align_items: AlignItems::FlexEnd,
+                        align_self: AlignSelf::Stretch,
+                        ..Default::default()
+                    },
+                    material: materials.add(Color::rgb(0.5, 0.5, 0.1).into()),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    parent.spawn_bundle(TextBundle {
+                        style: Style {
+                            margin: Rect::all(Val::Px(5.0)),
+                            ..Default::default()
+                        },
+                        text: Text::with_section(
+                            "Hello box",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                            Default::default(),
+                        ),
+                        ..Default::default()
+                    });
+                    parent.spawn_bundle(TextBundle {
+                        style: Style {
+                            margin: Rect::all(Val::Px(5.0)),
+                            align_self: AlignSelf::Center,
+                            ..Default::default()
+                        },
+                        text: Text::with_section(
+                            "Viscosity",
+                            TextStyle {
+                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                font_size: 30.0,
+                                color: Color::WHITE,
+                            },
+                            Default::default(),
+                        ),
+                        ..Default::default()
+                    });
+                    parent
+                        .spawn_bundle(TextBundle {
+                            style: Style {
+                                align_self: AlignSelf::Center,
+                                margin: Rect::all(Val::Px(5.0)),
+                                ..Default::default()
+                            },
+                            text: Text::with_section(
+                                "",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 30.0,
+                                    color: Color::WHITE,
+                                },
+                                Default::default(),
+                            ),
+                            ..Default::default()
+                        })
+                        .insert(SolveInfoLabel);
+                    parent
+                        .spawn_bundle(ButtonBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..Default::default()
+                            },
+                            material: button_material.normal.clone(),
+                            ..Default::default()
+                        })
+                        .insert(ShowVelocities)
+                        .with_children(|parent| {
+                            parent.spawn_bundle(TextBundle {
+                                style: Style {
+                                    align_self: AlignSelf::Center,
+                                    margin: Rect::all(Val::Px(5.0)),
+                                    ..Default::default()
+                                },
+                                text: Text::with_section(
+                                    "Show Velocities",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: 30.0,
+                                        color: Color::WHITE,
+                                    },
+                                    Default::default(),
+                                ),
+                                ..Default::default()
+                            });
+                        });
+                    parent
+                        .spawn_bundle(ButtonBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..Default::default()
+                            },
+                            material: match gui_state.show_water {
+                                true => button_material.pressed.clone(),
+                                false => button_material.normal.clone(),
+                            },
+                            ..Default::default()
+                        })
+                        .insert(ShowWater)
+                        .with_children(|parent| {
+                            parent.spawn_bundle(TextBundle {
+                                style: Style {
+                                    align_self: AlignSelf::Center,
+                                    margin: Rect::all(Val::Px(5.0)),
+                                    ..Default::default()
+                                },
+                                text: Text::with_section(
+                                    "Show Water",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: 30.0,
+                                        color: Color::WHITE,
+                                    },
+                                    Default::default(),
+                                ),
+                                ..Default::default()
+                            });
+                        });
+                })
+                .insert(GameMenu);
+            parent
+                .spawn_bundle(NodeBundle {
+                    style: Style {
+                        size: Size::new(Val::Percent(100.0), Val::Auto),
+                        border: Rect::all(Val::Px(3.0)),
+                        justify_content: JustifyContent::FlexStart,
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::FlexStart,
+                        align_self: AlignSelf::FlexStart,
+                        ..Default::default()
+                    },
+                    material: materials.add(Color::rgb(0.1, 0.5, 0.1).into()),
+                    ..Default::default()
+                })
+                .with_children(|parent| {
+                    for i in 0..10 {
+                        parent.spawn_bundle(TextBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                ..Default::default()
+                            },
+                            text: Text::with_section(
+                                format!("{}", i),
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 30.0,
+                                    color: Color::WHITE,
+                                },
+                                Default::default(),
+                            ),
+                            ..Default::default()
+                        });
+                    }
+                });
+        });
+    commands.spawn().insert(gui_state);
+}
+fn build_play_bar(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    button_material: Res<ButtonMaterial>,
+) {
+}
 fn build_ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_material: Res<ButtonMaterial>,
 ) {
-    println!("building ui");
-    let gui_state = GuiState::default();
-
-    commands
-        .spawn_bundle(NodeBundle {
-            style: Style {
-                // size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                border: Rect::all(Val::Px(3.0)),
-                justify_content: JustifyContent::FlexStart,
-                flex_direction: FlexDirection::ColumnReverse,
-                align_items: AlignItems::FlexEnd,
-                ..Default::default()
-            },
-            material: materials.add(Color::rgb(0.5, 0.5, 0.1).into()),
-            ..Default::default()
-        })
-        .with_children(|parent| {
-            parent.spawn_bundle(TextBundle {
-                style: Style {
-                    margin: Rect::all(Val::Px(5.0)),
-                    ..Default::default()
-                },
-                text: Text::with_section(
-                    "Hello box",
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 30.0,
-                        color: Color::WHITE,
-                    },
-                    Default::default(),
-                ),
-                ..Default::default()
-            });
-            parent.spawn_bundle(TextBundle {
-                style: Style {
-                    margin: Rect::all(Val::Px(5.0)),
-                    align_self: AlignSelf::Center,
-                    ..Default::default()
-                },
-                text: Text::with_section(
-                    "Viscosity",
-                    TextStyle {
-                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                        font_size: 30.0,
-                        color: Color::WHITE,
-                    },
-                    Default::default(),
-                ),
-                ..Default::default()
-            });
-            parent
-                .spawn_bundle(TextBundle {
-                    style: Style {
-                        align_self: AlignSelf::Center,
-                        margin: Rect::all(Val::Px(5.0)),
-                        ..Default::default()
-                    },
-                    text: Text::with_section(
-                        "",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 30.0,
-                            color: Color::WHITE,
-                        },
-                        Default::default(),
-                    ),
-                    ..Default::default()
-                })
-                .insert(SolveInfoLabel);
-            parent
-                .spawn_bundle(ButtonBundle {
-                    style: Style {
-                        margin: Rect::all(Val::Px(5.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..Default::default()
-                    },
-                    material: button_material.normal.clone(),
-                    ..Default::default()
-                })
-                .insert(ShowVelocities)
-                .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        style: Style {
-                            align_self: AlignSelf::Center,
-                            margin: Rect::all(Val::Px(5.0)),
-                            ..Default::default()
-                        },
-                        text: Text::with_section(
-                            "Show Velocities",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
-                });
-            parent
-                .spawn_bundle(ButtonBundle {
-                    style: Style {
-                        margin: Rect::all(Val::Px(5.0)),
-                        justify_content: JustifyContent::Center,
-                        align_items: AlignItems::Center,
-                        ..Default::default()
-                    },
-                    material: match gui_state.show_water {
-                        true => button_material.pressed.clone(),
-                        false => button_material.normal.clone(),
-                    },
-                    ..Default::default()
-                })
-                .insert(ShowWater)
-                .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        style: Style {
-                            align_self: AlignSelf::Center,
-                            margin: Rect::all(Val::Px(5.0)),
-                            ..Default::default()
-                        },
-                        text: Text::with_section(
-                            "Show Water",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
-                            },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
-                });
-        })
-        .insert(GameMenu);
-    commands.spawn().insert(gui_state);
 }
 fn show_velocity_button(
     button_materials: Res<ButtonMaterial>,
@@ -263,6 +353,7 @@ fn show_velocity_button(
         }
     }
 }
+
 fn solve_info(
     mut _commands: Commands,
     solve_query: Query<&Vec<SolveInfo>, With<WaterMarker>>,
