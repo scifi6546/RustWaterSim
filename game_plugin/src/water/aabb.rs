@@ -1,6 +1,17 @@
 use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
 use bevy::prelude::*;
 use nalgebra::Vector2;
+pub struct AABBMaterial {
+    pub material: Handle<StandardMaterial>,
+}
+pub fn insert_aabb_material(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let material = materials.add(Color::rgb(0.1, 0.1, 0.1).into());
+    info!("inserting aabb");
+    commands.insert_resource(AABBMaterial { material });
+}
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AABBBArrier {
     pub top_right: Vector2<i32>,
@@ -13,7 +24,18 @@ impl AABBBArrier {
             && self.bottom_left.x <= x
             && self.bottom_left.y <= y
     }
+    pub fn from_transform(transform: Transform, water: &FiniteSolver) -> Self {
+        let water_x = water.h().x();
+        let scaling = water_x as f32 / WATER_SIZE;
+        let lower = scaling * (transform.translation - 0.5 * transform.scale);
+        let upper = scaling * (transform.translation + 0.5 * transform.scale);
+        Self {
+            bottom_left: Vector2::new(lower.x as i32, lower.z as i32),
+            top_right: Vector2::new(upper.x as i32, upper.z as i32),
+        }
+    }
 }
+
 fn build_cube_from_aabb(
     aabb: &AABBBArrier,
     material: Handle<StandardMaterial>,
@@ -46,7 +68,7 @@ fn build_cube_from_aabb(
 pub fn build_barrier(
     commands: &mut Commands,
     aabb: AABBBArrier,
-    material: Handle<StandardMaterial>,
+    material: &AABBMaterial,
     meshes: &mut ResMut<Assets<Mesh>>,
     mean_h: f32,
     water_dimensions: Vector2<usize>,
@@ -54,7 +76,7 @@ pub fn build_barrier(
     commands
         .spawn_bundle(build_cube_from_aabb(
             &aabb,
-            material,
+            material.material.clone(),
             meshes,
             mean_h,
             water_dimensions,
@@ -77,11 +99,8 @@ pub fn aabb_transform(
     for (mut aabb, transform) in box_query.iter_mut() {
         let lower = scaling * (transform.translation - 0.5 * transform.scale);
         let upper = scaling * (transform.translation + 0.5 * transform.scale);
-        info!("transform: {}", scaling * transform.translation);
-        info!("lower x: {}, aabb: {}", lower.x, aabb.bottom_left.x);
-        info!("aabb before: {:?}", aabb);
+
         aabb.bottom_left = Vector2::new(lower.x as i32, lower.z as i32);
         aabb.top_right = Vector2::new(upper.x as i32, upper.z as i32);
-        info!("aabb after: {:?}", aabb);
     }
 }

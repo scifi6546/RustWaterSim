@@ -29,12 +29,8 @@ pub struct Source {
 }
 impl Source {
     pub fn change_h(&self, height: &mut Grid<f32>, t: u32) {
-        let t_i = t;
         let t = t as f32;
         let s = (2.0 * PI * t / self.period).sin();
-        if t_i % 10 == 0 {
-            info!("s: {}", s);
-        }
 
         for x in 0..height.x() {
             for y in 0..height.y() {
@@ -327,6 +323,26 @@ impl FiniteSolver {
                         period: 400.0,
                     },
                 ],
+                t: 0,
+            },
+            vec![],
+        )
+    }
+    pub fn single_dynamic() -> (Self, Vec<AABBBArrier>) {
+        let h = Grid::from_fn(|_, _| 2.0, Vector2::new(200, 200));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(201, 200));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(200, 201));
+        (
+            Self {
+                h,
+                u,
+                v,
+                sources: vec![Source {
+                    center: Vector2::new(100.0, 100.0),
+                    height: 2.2,
+                    radius: 10.0,
+                    period: 1000.0,
+                }],
                 t: 0,
             },
             vec![],

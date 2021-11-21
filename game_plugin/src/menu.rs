@@ -112,16 +112,13 @@ fn conditions_button(
     for (interaction, mut material, select_info) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
-                info!("clicked");
                 state.set(GameState::Playing).unwrap();
                 commands.insert_resource(select_info.clone());
             }
             Interaction::Hovered => {
-                info!("hovered");
                 *material = button_materials.hovered.clone();
             }
             Interaction::None => {
-                info!("none");
                 *material = button_materials.normal.clone();
             }
         }
@@ -133,7 +130,6 @@ fn clear_ui(
     mut commands: Commands,
     text_query: Query<Entity, Or<(With<Text>, With<Node>, With<Button>)>>,
 ) {
-    info!("clearing ui?");
     for entity in text_query.iter() {
         commands.entity(entity).despawn();
     }

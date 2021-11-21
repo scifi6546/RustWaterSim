@@ -1,28 +1,37 @@
 use crate::prelude::{CameraLabel, GuiState, SelectStartupInfo};
 use crate::GameState;
 use bevy::{prelude::*, render::mesh::Indices};
-mod aabb;
+pub mod aabb;
 mod finite_solver;
-use aabb::AABBBArrier;
+use aabb::{AABBBArrier, AABBMaterial};
 pub use finite_solver::FiniteSolver;
 mod uv_show;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
-const WATER_SIZE: f32 = 6.0;
+pub const WATER_SIZE: f32 = 6.0;
 const HEIGHT_MULTIPLIER: f32 = 30.0;
 
 use nalgebra::{Vector2, Vector3};
 pub struct WaterScale {
     scale: f32,
 }
-
+#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+pub enum WaterLabel {
+    InsertAABBMaterial,
+}
 pub struct WaterPlugin;
 impl Plugin for WaterPlugin {
     fn build(&self, app: &mut AppBuilder) {
+        app.add_system_set(
+            SystemSet::on_enter(GameState::Loading)
+                .with_system(aabb::insert_aabb_material.system())
+                .label(WaterLabel::InsertAABBMaterial),
+        );
         // build system set
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
                 .after(CameraLabel)
+                .after(WaterLabel::InsertAABBMaterial)
                 .with_system(spawn_water_system.system())
                 .with_system(uv_show::build_uv_cubes.system()),
         )
@@ -30,6 +39,7 @@ impl Plugin for WaterPlugin {
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
                 .after(CameraLabel)
+                .after(WaterLabel::InsertAABBMaterial)
                 .with_system(water_simulation.system())
                 .with_system(show_water.system())
                 .with_system(aabb::aabb_transform.system())
@@ -164,6 +174,7 @@ pub struct WaterMarker;
 fn spawn_water_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
+    aabb_material: Res<AABBMaterial>,
     startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
@@ -187,12 +198,11 @@ fn spawn_water_system(
         .insert(info)
         .insert(WaterScale { scale })
         .insert(WaterMarker);
-    let box_material = materials.add(Color::rgb(0.1, 0.1, 0.1).into());
     for barrier in barriers.drain(..) {
         aabb::build_barrier(
             &mut commands,
             barrier,
-            box_material.clone(),
+            &aabb_material,
             &mut meshes,
             mean_h,
             water_dimensions,
@@ -211,6 +221,10 @@ pub const CONDITIONS: &[InitialConditions] = &[
     InitialConditions {
         name: "Droplet",
         build_water_fn: || finite_solver::FiniteSolver::droplet(),
+    },
+    InitialConditions {
+        name: "Single Source",
+        build_water_fn: || finite_solver::FiniteSolver::single_dynamic(),
     },
     InitialConditions {
         name: "Two Sources",

@@ -21,7 +21,10 @@ pub mod prelude {
     pub use super::game_menu::GuiState;
     pub use super::menu::SelectStartupInfo;
     pub use super::player::CameraLabel;
-    pub use super::water::{FiniteSolver, InitialConditions, SolveInfo, WaterMarker, CONDITIONS};
+    pub use super::water::{
+        aabb::{build_barrier, AABBBArrier, AABBMaterial},
+        FiniteSolver, InitialConditions, SolveInfo, WaterMarker, CONDITIONS, WATER_SIZE,
+    };
 }
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html

@@ -1,6 +1,9 @@
-use crate::prelude::{FiniteSolver, SolveInfo, WaterMarker};
+use crate::prelude::{
+    build_barrier, AABBBArrier, AABBMaterial, FiniteSolver, SolveInfo, WaterMarker, WATER_SIZE,
+};
 use crate::GameState;
 use bevy::prelude::*;
+use nalgebra::Vector2;
 use std::cmp::{max, min};
 struct GameMenu;
 pub struct GameMenuPlugin;
@@ -30,7 +33,12 @@ impl Plugin for GameMenuPlugin {
         app.add_system_set(
             SystemSet::on_update(GameState::Playing).with_system(solve_info.system()),
         )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_speed.system()));
+        .add_system_set(
+            SystemSet::on_update(GameState::Playing)
+                .with_system(show_speed.system())
+                .with_system(solve_info.system())
+                .with_system(add_box_button.system()),
+        );
     }
 }
 /// Marks viscocoty change text button
@@ -82,6 +90,7 @@ struct PauseButton;
 struct PauseTexture;
 struct PlayTexture;
 struct ShowSpeed;
+struct AddBoxButton;
 /// Marks Show Velocities button
 struct ShowVelocities;
 /// Marks show water
@@ -237,6 +246,37 @@ fn ui(
                                 ..Default::default()
                             });
                         });
+                    parent
+                        .spawn_bundle(ButtonBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..Default::default()
+                            },
+                            material: button_material.normal.clone(),
+                            ..Default::default()
+                        })
+                        .insert(AddBoxButton)
+                        .with_children(|parent| {
+                            parent.spawn_bundle(TextBundle {
+                                style: Style {
+                                    align_self: AlignSelf::Center,
+                                    margin: Rect::all(Val::Px(5.0)),
+                                    ..Default::default()
+                                },
+                                text: Text::with_section(
+                                    "Add Box",
+                                    TextStyle {
+                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                        font_size: 30.0,
+                                        color: Color::WHITE,
+                                    },
+                                    Default::default(),
+                                ),
+                                ..Default::default()
+                            });
+                        });
                 })
                 .insert(GameMenu);
             parent
@@ -348,6 +388,7 @@ fn show_speed(
         }
     }
 }
+
 fn pause_button(
     button_materials: Res<ButtonMaterial>,
     mut gui_state_query: Query<&mut GuiState, ()>,
@@ -388,9 +429,6 @@ fn pause_button(
     } else {
         return;
     };
-    if interaction != Interaction::None {
-        info!("{:?}", interaction);
-    }
     match interaction {
         Interaction::Clicked => {
             *button_mat = button_materials.pressed.clone();
@@ -442,7 +480,6 @@ fn play_button(
     }
 
     if let Some(interaction) = interaction {
-        info!("play button {:?}", interaction);
         match interaction {
             Interaction::Clicked => {
                 let mut new_speed;
@@ -463,10 +500,6 @@ fn play_button(
                         }
                     }
                 };
-                info!(
-                    "new speed: {}, old speed: {}",
-                    new_speed, gui_state.water_speed
-                );
                 gui_state.water_speed = new_speed;
                 *play_material = button_materials.pressed.clone();
             }
@@ -538,6 +571,49 @@ fn show_velocity_button(
                 if gui_state.show_water {
                     *material = button_materials.pressed.clone();
                 }
+            }
+        }
+    }
+}
+fn add_box_button(
+    mut commands: Commands,
+    button_materials: Res<ButtonMaterial>,
+    aabb_material: Res<AABBMaterial>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    solver_query: Query<&FiniteSolver, ()>,
+    mut queries: Query<
+        (&Interaction, &mut Handle<ColorMaterial>, &Children),
+        (Changed<Interaction>, With<AddBoxButton>),
+    >,
+) {
+    for (interation, mut material, children) in queries.iter_mut() {
+        match *interation {
+            Interaction::Clicked => {
+                let water = if let Some(water) = solver_query.iter().next() {
+                    water
+                } else {
+                    error!("failed to find water entity");
+                    return;
+                };
+                let mean_h = water.mean_height();
+                let mut aabb_transform = Transform::default();
+                aabb_transform.translation.x = WATER_SIZE / 2.0;
+                aabb_transform.translation.y = WATER_SIZE / 2.0;
+                build_barrier(
+                    &mut commands,
+                    AABBBArrier::from_transform(aabb_transform, water),
+                    &aabb_material,
+                    &mut meshes,
+                    mean_h,
+                    Vector2::new(water.h().x(), water.h().y()),
+                );
+                *material = button_materials.pressed.clone();
+            }
+            Interaction::Hovered => {
+                *material = button_materials.hovered.clone();
+            }
+            Interaction::None => {
+                *material = button_materials.normal.clone();
             }
         }
     }
