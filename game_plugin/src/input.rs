@@ -39,9 +39,11 @@ pub fn default_input_map(
     }
 
     let mut cursor_delta = Vec2::ZERO;
+    /*
     for event in mouse_motion_events.iter() {
         cursor_delta += event.delta;
     }
+    */
     if keyboard.pressed(KeyCode::Left) {
         events.send(ControlEvent::Orbit(
             mouse_rotate_sensitivity * Vec2::new(-4.0, 0.0),
@@ -63,12 +65,10 @@ pub fn default_input_map(
         ))
     }
     if mouse_buttons.pressed(MouseButton::Left) {
-        info!("left pressed, delta: {}", cursor_delta);
         events.send(ControlEvent::Orbit(mouse_rotate_sensitivity * cursor_delta));
     }
 
     if mouse_buttons.pressed(MouseButton::Right) {
-        info!("right pressed");
         events.send(ControlEvent::TranslateTarget(
             mouse_translate_sensitivity * cursor_delta,
         ));

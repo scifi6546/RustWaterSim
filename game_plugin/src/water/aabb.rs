@@ -1,4 +1,4 @@
-use super::{HEIGHT_MULTIPLIER, WATER_SIZE};
+use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -14,7 +14,7 @@ impl AABBBArrier {
             && self.bottom_left.y <= y
     }
 }
-pub fn build_cube_from_aabb(
+fn build_cube_from_aabb(
     aabb: &AABBBArrier,
     material: Handle<StandardMaterial>,
     meshes: &mut ResMut<Assets<Mesh>>,
@@ -32,7 +32,7 @@ pub fn build_cube_from_aabb(
         center_z,
     ));
 
-    let scale_xz = (aabb.top_right - aabb.bottom_left);
+    let scale_xz = aabb.top_right - aabb.bottom_left;
     let scale_xz = scaling * Vector2::new(scale_xz.x as f32, scale_xz.y as f32);
     transform.scale = Vec3::new(scale_xz.x, 2.0, scale_xz.y);
 
@@ -41,5 +41,47 @@ pub fn build_cube_from_aabb(
         material,
         transform,
         ..Default::default()
+    }
+}
+pub fn build_barrier(
+    commands: &mut Commands,
+    aabb: AABBBArrier,
+    material: Handle<StandardMaterial>,
+    meshes: &mut ResMut<Assets<Mesh>>,
+    mean_h: f32,
+    water_dimensions: Vector2<usize>,
+) {
+    commands
+        .spawn_bundle(build_cube_from_aabb(
+            &aabb,
+            material,
+            meshes,
+            mean_h,
+            water_dimensions,
+        ))
+        .insert_bundle(bevy_mod_picking::PickableBundle::default())
+        .insert(bevy_transform_gizmo::GizmoTransformable)
+        .insert(aabb);
+}
+pub fn aabb_transform(
+    water_query: Query<&FiniteSolver, With<FiniteSolver>>,
+    mut box_query: Query<(&mut AABBBArrier, &Transform), Changed<Transform>>,
+) {
+    let water = if let Some(water) = water_query.iter().next() {
+        water
+    } else {
+        return;
+    };
+    let water_x = water.h().x();
+    let scaling = water_x as f32 / WATER_SIZE;
+    for (mut aabb, transform) in box_query.iter_mut() {
+        let lower = scaling * (transform.translation - 0.5 * transform.scale);
+        let upper = scaling * (transform.translation + 0.5 * transform.scale);
+        info!("transform: {}", scaling * transform.translation);
+        info!("lower x: {}, aabb: {}", lower.x, aabb.bottom_left.x);
+        info!("aabb before: {:?}", aabb);
+        aabb.bottom_left = Vector2::new(lower.x as i32, lower.z as i32);
+        aabb.top_right = Vector2::new(upper.x as i32, upper.z as i32);
+        info!("aabb after: {:?}", aabb);
     }
 }

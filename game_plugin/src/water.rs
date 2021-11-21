@@ -1,4 +1,4 @@
-use crate::prelude::{GuiState, SelectStartupInfo};
+use crate::prelude::{CameraLabel, GuiState, SelectStartupInfo};
 use crate::GameState;
 use bevy::{prelude::*, render::mesh::Indices};
 mod aabb;
@@ -19,18 +19,21 @@ pub struct WaterScale {
 pub struct WaterPlugin;
 impl Plugin for WaterPlugin {
     fn build(&self, app: &mut AppBuilder) {
+        // build system set
         app.add_system_set(
-            SystemSet::on_enter(GameState::Playing).with_system(spawn_water_system.system()),
+            SystemSet::on_enter(GameState::Playing)
+                .after(CameraLabel)
+                .with_system(spawn_water_system.system())
+                .with_system(uv_show::build_uv_cubes.system()),
         )
+        // update system set
         .add_system_set(
-            SystemSet::on_enter(GameState::Playing).with_system(uv_show::build_uv_cubes.system()),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(water_simulation.system()),
-        )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(show_water.system()))
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(uv_show::run_uv_cubes.system()),
+            SystemSet::on_update(GameState::Playing)
+                .after(CameraLabel)
+                .with_system(water_simulation.system())
+                .with_system(show_water.system())
+                .with_system(aabb::aabb_transform.system())
+                .with_system(uv_show::run_uv_cubes.system()),
         );
     }
 }
@@ -164,17 +167,10 @@ fn spawn_water_system(
     startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    //let mut water: Box<dyn Solver> = Box::new(MySolver::new(water_heights, velocities));
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::droplet());
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::barrier());
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::dynamic_droplet());
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::big_droplet());
-    //let mut water: Box<dyn Solver> = Box::new(finite_solver::FiniteSolver::wave_wall());
     let water_fn = CONDITIONS[startup_info.index].build_water_fn;
     let (mut water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.h().x() as f32;
-    info!("transform scale: {}", scale);
 
     transform.scale = Vec3::new(scale, scale, scale);
     let info: Vec<SolveInfo> = vec![];
@@ -193,15 +189,14 @@ fn spawn_water_system(
         .insert(WaterMarker);
     let box_material = materials.add(Color::rgb(0.1, 0.1, 0.1).into());
     for barrier in barriers.drain(..) {
-        commands
-            .spawn_bundle(aabb::build_cube_from_aabb(
-                &barrier,
-                box_material.clone(),
-                &mut meshes,
-                mean_h,
-                water_dimensions,
-            ))
-            .insert(barrier);
+        aabb::build_barrier(
+            &mut commands,
+            barrier,
+            box_material.clone(),
+            &mut meshes,
+            mean_h,
+            water_dimensions,
+        );
     }
 }
 pub struct InitialConditions {
@@ -233,6 +228,7 @@ pub const CONDITIONS: &[InitialConditions] = &[
 fn water_simulation(
     _commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
+    gui_query: Query<&GuiState, With<GuiState>>,
     mut water_query: Query<
         (
             &mut Transform,
@@ -244,8 +240,19 @@ fn water_simulation(
     >,
     aabb_query: Query<&AABBBArrier, ()>,
 ) {
+    let gui_state = gui_query.iter().next();
+    if gui_state.is_none() {
+        return;
+    }
+    let gui_state = gui_state.unwrap();
+    if gui_state.water_speed == 0 {
+        return;
+    }
     let aabb_vec = aabb_query.iter().copied().collect::<Vec<_>>();
     for (_, mut water, mesh, mut info) in water_query.iter_mut() {
+        for i in 0..(gui_state.water_speed - 1) {
+            water.solve(&aabb_vec);
+        }
         let (heights, out_info) = water.solve(&aabb_vec);
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
