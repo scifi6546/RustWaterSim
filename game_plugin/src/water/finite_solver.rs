@@ -47,11 +47,7 @@ impl Source {
         }
     }
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BoundryType {
-    Source,
-    Reflection,
-}
+
 pub struct FiniteSolver {
     /// Water height
     h: Grid<f32>,
@@ -72,7 +68,7 @@ impl FiniteSolver {
     const G: f32 = 9.81;
     const DT: f32 = 0.1;
     const VISC: f32 = 0.0;
-    const BOUNDRY: BoundryType = BoundryType::Reflection;
+
     /// gets mean height of water
     pub fn mean_height(&self) -> f32 {
         let mut sum = 0.0;
@@ -127,7 +123,7 @@ impl FiniteSolver {
     }
     /// Builds mesh from grid, todo: make water sim in place for performance reasons
     pub fn build_mesh(&mut self, barriers: &[AABBBArrier]) -> Mesh {
-        let (water, solve_info) = self.solve(barriers);
+        let (water, _solve_info) = self.solve(barriers);
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
         super::build_mesh(water, &mut mesh);
         return mesh;
@@ -139,8 +135,8 @@ impl FiniteSolver {
         }
         let mut u_half = self.u.clone();
         let mut v_half = self.v.clone();
-        let half_uv =
-            Self::update_velocity(&self.h, &mut u_half, &mut v_half, Self::DT / 2.0, barriers);
+
+        Self::update_velocity(&self.h, &mut u_half, &mut v_half, Self::DT / 2.0, barriers);
         let mut half_h = self.h.clone();
         Self::update_heights(
             &self.h,
@@ -232,20 +228,10 @@ impl FiniteSolver {
                 //lower x boundry
                 if x >= 1 || !vec_contains_point(&boxes, x as i32 - 1, y as i32) {
                     dx += un1 * (hxn1 + h0) / 2.0;
-                } else {
-                    match Self::BOUNDRY {
-                        BoundryType::Source => continue,
-                        BoundryType::Reflection => {}
-                    }
                 }
                 // upper x boundry
                 if x <= h.x() - 2 || !vec_contains_point(&boxes, x as i32 + 1, y as i32) {
                     dx -= up1 * (hxp1 + h0) / 2.0;
-                } else {
-                    match Self::BOUNDRY {
-                        BoundryType::Source => continue,
-                        BoundryType::Reflection => {}
-                    }
                 }
 
                 //let dx = un1 * (hxn1 + h0) / 2.0 - up1 * (hxp1 + h0) / 2.0;
@@ -253,20 +239,10 @@ impl FiniteSolver {
                 //lower y boundry
                 if y >= 1 || !vec_contains_point(&boxes, x as i32, y as i32 - 1) {
                     dy += vn1 * (hyn1 + h0) / 2.0;
-                } else {
-                    match Self::BOUNDRY {
-                        BoundryType::Source => continue,
-                        BoundryType::Reflection => {}
-                    }
                 }
                 // upper y boundry
                 if y <= h.y() - 2 || !vec_contains_point(&boxes, x as i32, y as i32 + 1) {
                     dy -= vp1 * (hyp1 + h0) / 2.0;
-                } else {
-                    match Self::BOUNDRY {
-                        BoundryType::Source => continue,
-                        BoundryType::Reflection => {}
-                    }
                 }
                 let delta = delta_t * (dx + dy);
                 max_delta = if delta > max_delta { delta } else { max_delta };
@@ -356,7 +332,7 @@ impl FiniteSolver {
                 let height = 10.0;
                 let drop_x = 125.0;
                 let drop_y = 125.0;
-                let r = ((x as f32 - drop_x).powi(2) + (y as f32 - drop_x).powi(2)).sqrt();
+                let r = ((x as f32 - drop_x).powi(2) + (y as f32 - drop_y).powi(2)).sqrt();
                 if r <= droplet_size {
                     height * (droplet_size - r) / droplet_size + floor
                 } else {

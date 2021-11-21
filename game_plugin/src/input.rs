@@ -1,8 +1,5 @@
 use bevy::{
-    input::{
-        mouse::{MouseMotion, MouseWheel},
-        prelude::*,
-    },
+    input::{mouse::MouseWheel, prelude::*},
     prelude::*,
 };
 use smooth_bevy_cameras::controllers::orbit::{ControlEvent, OrbitCameraController};
@@ -15,7 +12,6 @@ impl Plugin for CameraInput {
 pub fn default_input_map(
     mut events: EventWriter<ControlEvent>,
     mut mouse_wheel_reader: EventReader<MouseWheel>,
-    mut mouse_motion_events: EventReader<MouseMotion>,
     mouse_buttons: Res<Input<MouseButton>>,
     keyboard: Res<Input<KeyCode>>,
     controllers: Query<&OrbitCameraController>,
@@ -38,7 +34,7 @@ pub fn default_input_map(
         return;
     }
 
-    let mut cursor_delta = Vec2::ZERO;
+    let cursor_delta = Vec2::ZERO;
     /*
     for event in mouse_motion_events.iter() {
         cursor_delta += event.delta;

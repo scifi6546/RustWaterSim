@@ -12,9 +12,7 @@ pub const WATER_SIZE: f32 = 6.0;
 const HEIGHT_MULTIPLIER: f32 = 30.0;
 
 use nalgebra::{Vector2, Vector3};
-pub struct WaterScale {
-    scale: f32,
-}
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
 pub enum WaterLabel {
     InsertAABBMaterial,
@@ -196,7 +194,6 @@ fn spawn_water_system(
         })
         .insert(water)
         .insert(info)
-        .insert(WaterScale { scale })
         .insert(WaterMarker);
     for barrier in barriers.drain(..) {
         aabb::build_barrier(
@@ -264,9 +261,9 @@ fn water_simulation(
     }
     let aabb_vec = aabb_query.iter().copied().collect::<Vec<_>>();
     for (_, mut water, mesh, mut info) in water_query.iter_mut() {
-        for i in 0..(gui_state.water_speed - 1) {
+        (0..(gui_state.water_speed - 1)).for_each(|_| {
             water.solve(&aabb_vec);
-        }
+        });
         let (heights, out_info) = water.solve(&aabb_vec);
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();

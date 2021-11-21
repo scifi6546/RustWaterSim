@@ -4,13 +4,12 @@ use crate::prelude::{
 use crate::GameState;
 use bevy::prelude::*;
 use nalgebra::Vector2;
-use std::cmp::{max, min};
+use std::cmp::max;
 struct GameMenu;
 pub struct GameMenuPlugin;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
 enum GuiLabel {
-    SidePanel,
-    BottomPanel,
+    GuiCreate,
 }
 impl Plugin for GameMenuPlugin {
     fn build(&self, app: &mut AppBuilder) {
@@ -19,7 +18,7 @@ impl Plugin for GameMenuPlugin {
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
                 .with_system(ui.system())
-                .label(GuiLabel::SidePanel),
+                .label(GuiLabel::GuiCreate),
         );
         app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(run_ui.system()));
 
@@ -394,7 +393,7 @@ fn pause_button(
     mut gui_state_query: Query<&mut GuiState, ()>,
     mut queries: QuerySet<(
         Query<
-            (&Interaction),
+            &Interaction,
             (
                 With<Interaction>,
                 Or<(With<PauseButton>, With<PauseTexture>)>,
@@ -455,7 +454,7 @@ fn play_button(
     mut gui_state_query: Query<&mut GuiState, ()>,
     mut queries: QuerySet<(
         Query<
-            (&Interaction),
+            &Interaction,
             (
                 Changed<Interaction>,
                 Or<(With<PlayButton>, With<PlayTexture>)>,
@@ -515,22 +514,19 @@ fn show_velocity_button(
     mut gui_state_query: Query<&mut GuiState, ()>,
     mut queries: QuerySet<(
         Query<
-            (&Interaction, &mut Handle<ColorMaterial>, &Children),
+            (&Interaction, &mut Handle<ColorMaterial>),
             (Changed<Interaction>, With<ShowVelocities>),
         >,
-        Query<
-            (&Interaction, &mut Handle<ColorMaterial>, &Children),
-            (Changed<Interaction>, With<ShowWater>),
-        >,
+        Query<(&Interaction, &mut Handle<ColorMaterial>), (Changed<Interaction>, With<ShowWater>)>,
     )>,
 ) {
-    let mut gui_state = gui_state_query.iter_mut().next();
+    let gui_state = gui_state_query.iter_mut().next();
     if gui_state.is_none() {
         error!("gui state not found");
         return;
     }
     let mut gui_state = gui_state.unwrap();
-    for (interation, mut material, children) in queries.q0_mut().iter_mut() {
+    for (interation, mut material) in queries.q0_mut().iter_mut() {
         match *interation {
             Interaction::Clicked => {
                 gui_state.show_velocities = !gui_state.show_velocities;
@@ -552,7 +548,7 @@ fn show_velocity_button(
             }
         }
     }
-    for (interation, mut material, children) in queries.q1_mut().iter_mut() {
+    for (interation, mut material) in queries.q1_mut().iter_mut() {
         match *interation {
             Interaction::Clicked => {
                 gui_state.show_water = !gui_state.show_water;
@@ -582,11 +578,11 @@ fn add_box_button(
     mut meshes: ResMut<Assets<Mesh>>,
     solver_query: Query<&FiniteSolver, ()>,
     mut queries: Query<
-        (&Interaction, &mut Handle<ColorMaterial>, &Children),
+        (&Interaction, &mut Handle<ColorMaterial>),
         (Changed<Interaction>, With<AddBoxButton>),
     >,
 ) {
-    for (interation, mut material, children) in queries.iter_mut() {
+    for (interation, mut material) in queries.iter_mut() {
         match *interation {
             Interaction::Clicked => {
                 let water = if let Some(water) = solver_query.iter().next() {

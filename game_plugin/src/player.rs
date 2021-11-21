@@ -24,10 +24,11 @@ impl Plugin for PlayerPlugin {
         .add_system_set(SystemSet::on_update(GameState::Playing).with_system(move_player.system()));
     }
 }
-
+const SPAWN_RADIUS: f32 = 10.0;
 fn spawn_camera(mut commands: Commands) {
-    let eye = Vec3::new(-2.0, 2.5, 5.0);
-    let target = Vec3::ZERO;
+    let target = Vec3::new(3.0, 3.0, 3.0);
+    let eye = SPAWN_RADIUS * Vec3::new(-2.0, 2.5, 5.0).normalize() + target;
+
     let mouse_wheel_zoom_sensitivity = 0.02;
     #[cfg(target_family = "wasm")]
     let mouse_wheel_zoom_sensitivity = 0.002;

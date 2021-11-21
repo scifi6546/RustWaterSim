@@ -14,7 +14,6 @@ pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f
     let z: f32 = translation.z;
     let offset = mesh.count_vertices();
     if mesh.indices_mut().is_none() {
-        let data: Vec<u32> = vec![];
         mesh.set_indices(Some(Indices::U32(vec![])));
     }
     let indices = mesh.indices_mut().unwrap();
@@ -267,7 +266,7 @@ pub fn build_uv_cubes(
     cube.set_attribute(Mesh::ATTRIBUTE_NORMAL, normal);
     cube.set_attribute(Mesh::ATTRIBUTE_UV_0, uv);
 
-    let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
+    let transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     commands
         .spawn_bundle(PbrBundle {
             material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
@@ -286,9 +285,7 @@ pub fn build_uv_cubes(
         .insert(VShow);
 }
 pub fn run_uv_cubes(
-    mut commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     gui_query: Query<&GuiState>,
     water_query: Query<&FiniteSolver, ()>,
     mut queries: QuerySet<(
@@ -313,7 +310,7 @@ pub fn run_uv_cubes(
     let water = water.unwrap();
     let multiplier = WATER_SIZE / water.h().x() as f32;
 
-    for (mut mesh, mut visible) in u_cubes.iter_mut() {
+    for (mesh, mut visible) in u_cubes.iter_mut() {
         if !gui_state.show_velocities {
             visible.is_visible = false;
             continue;
@@ -336,7 +333,7 @@ pub fn run_uv_cubes(
         }
     }
     let v_cubes = queries.q1_mut();
-    for (mut mesh, mut visible) in v_cubes.iter_mut() {
+    for (mesh, mut visible) in v_cubes.iter_mut() {
         if !gui_state.show_velocities {
             visible.is_visible = false;
             continue;
