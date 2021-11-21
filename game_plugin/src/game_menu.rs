@@ -82,7 +82,7 @@ impl Default for GuiState {
         }
     }
 }
-const MAX_WATER_SPEED: u32 = 16;
+const MAX_WATER_SPEED: u32 = 64;
 /// Marker for play button
 struct PlayButton;
 struct PauseButton;

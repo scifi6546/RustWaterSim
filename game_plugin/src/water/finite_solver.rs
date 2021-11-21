@@ -62,7 +62,6 @@ pub struct FiniteSolver {
 }
 
 impl FiniteSolver {
-    const NUM_STEPS_PER_FRAME: usize = 2;
     const DX: f32 = 999.0;
     const DY: f32 = 999.0;
     const G: f32 = 9.81;
@@ -82,13 +81,10 @@ impl FiniteSolver {
     /// runs water simulation and outputs water heights
     pub fn solve(&mut self, boxes: &[AABBBArrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         let mut max_delta = 0.0;
-        for _ in 0..Self::NUM_STEPS_PER_FRAME {
-            //Self::update_velocity(&self.h, &mut self.u, &mut self.v, Self::DT);
-            //let old_h = self.h.clone();
-            //let delta = Self::update_heights(&old_h, &mut self.h, &self.u, &self.v, Self::DT);
-            let delta = self.time_step(boxes);
-            max_delta = if delta > max_delta { delta } else { max_delta };
-        }
+
+        let delta = self.time_step(boxes);
+        max_delta = if delta > max_delta { delta } else { max_delta };
+
         let mut volume = 0.0;
         for x in 0..self.h.x() {
             for y in 0..self.h.y() {
