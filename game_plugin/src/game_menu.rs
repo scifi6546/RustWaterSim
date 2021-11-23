@@ -36,13 +36,16 @@ impl Plugin for GameMenuPlugin {
             SystemSet::on_update(GameState::Playing)
                 .with_system(show_speed.system())
                 .with_system(solve_info.system())
+                .with_system(leave_button.system())
                 .with_system(add_box_button.system()),
-        );
+        )
+        .add_system_set(SystemSet::on_exit(GameState::Playing).with_system(cleanup_ui.system()));
     }
 }
 /// Marks viscocoty change text button
 struct ViscocityChange;
 struct SolveInfoLabel;
+
 struct ButtonMaterial {
     normal: Handle<ColorMaterial>,
     hovered: Handle<ColorMaterial>,
@@ -94,6 +97,10 @@ struct AddBoxButton;
 struct ShowVelocities;
 /// Marks show water
 struct ShowWater;
+struct LeaveButton;
+struct LeaveText;
+/// marks that belongs to game::playing state. will be destroyed at end of this state
+pub struct GameEntity;
 fn ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -112,6 +119,7 @@ fn ui(
             material: materials.add(Color::NONE.into()),
             ..Default::default()
         })
+        .insert(GameEntity)
         .with_children(|parent| {
             parent
                 .spawn_bundle(NodeBundle {
@@ -127,40 +135,45 @@ fn ui(
                     material: materials.add(Color::rgb(0.5, 0.5, 0.1).into()),
                     ..Default::default()
                 })
+                .insert(GameEntity)
                 .with_children(|parent| {
-                    parent.spawn_bundle(TextBundle {
-                        style: Style {
-                            margin: Rect::all(Val::Px(5.0)),
-                            ..Default::default()
-                        },
-                        text: Text::with_section(
-                            "Hello box",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
+                    parent
+                        .spawn_bundle(TextBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                ..Default::default()
                             },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
-                    parent.spawn_bundle(TextBundle {
-                        style: Style {
-                            margin: Rect::all(Val::Px(5.0)),
-                            align_self: AlignSelf::Center,
+                            text: Text::with_section(
+                                "Hello box",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 30.0,
+                                    color: Color::WHITE,
+                                },
+                                Default::default(),
+                            ),
                             ..Default::default()
-                        },
-                        text: Text::with_section(
-                            "Viscosity",
-                            TextStyle {
-                                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                font_size: 30.0,
-                                color: Color::WHITE,
+                        })
+                        .insert(GameEntity);
+                    parent
+                        .spawn_bundle(TextBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                align_self: AlignSelf::Center,
+                                ..Default::default()
                             },
-                            Default::default(),
-                        ),
-                        ..Default::default()
-                    });
+                            text: Text::with_section(
+                                "Viscosity",
+                                TextStyle {
+                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                    font_size: 30.0,
+                                    color: Color::WHITE,
+                                },
+                                Default::default(),
+                            ),
+                            ..Default::default()
+                        })
+                        .insert(GameEntity);
                     parent
                         .spawn_bundle(TextBundle {
                             style: Style {
@@ -179,7 +192,8 @@ fn ui(
                             ),
                             ..Default::default()
                         })
-                        .insert(SolveInfoLabel);
+                        .insert(SolveInfoLabel)
+                        .insert(GameEntity);
                     parent
                         .spawn_bundle(ButtonBundle {
                             style: Style {
@@ -191,26 +205,30 @@ fn ui(
                             material: button_material.normal.clone(),
                             ..Default::default()
                         })
+                        .insert(GameEntity)
                         .insert(ShowVelocities)
                         .with_children(|parent| {
-                            parent.spawn_bundle(TextBundle {
-                                style: Style {
-                                    align_self: AlignSelf::Center,
-                                    margin: Rect::all(Val::Px(5.0)),
-                                    ..Default::default()
-                                },
-                                text: Text::with_section(
-                                    "Show Velocities",
-                                    TextStyle {
-                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                        font_size: 30.0,
-                                        color: Color::WHITE,
+                            parent
+                                .spawn_bundle(TextBundle {
+                                    style: Style {
+                                        align_self: AlignSelf::Center,
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        ..Default::default()
                                     },
-                                    Default::default(),
-                                ),
-                                ..Default::default()
-                            });
-                        });
+                                    text: Text::with_section(
+                                        "Show Velocities",
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: 30.0,
+                                            color: Color::WHITE,
+                                        },
+                                        Default::default(),
+                                    ),
+                                    ..Default::default()
+                                })
+                                .insert(GameEntity);
+                        })
+                        .insert(GameEntity);
                     parent
                         .spawn_bundle(ButtonBundle {
                             style: Style {
@@ -226,24 +244,27 @@ fn ui(
                             ..Default::default()
                         })
                         .insert(ShowWater)
+                        .insert(GameEntity)
                         .with_children(|parent| {
-                            parent.spawn_bundle(TextBundle {
-                                style: Style {
-                                    align_self: AlignSelf::Center,
-                                    margin: Rect::all(Val::Px(5.0)),
-                                    ..Default::default()
-                                },
-                                text: Text::with_section(
-                                    "Show Water",
-                                    TextStyle {
-                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                        font_size: 30.0,
-                                        color: Color::WHITE,
+                            parent
+                                .spawn_bundle(TextBundle {
+                                    style: Style {
+                                        align_self: AlignSelf::Center,
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        ..Default::default()
                                     },
-                                    Default::default(),
-                                ),
-                                ..Default::default()
-                            });
+                                    text: Text::with_section(
+                                        "Show Water",
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: 30.0,
+                                            color: Color::WHITE,
+                                        },
+                                        Default::default(),
+                                    ),
+                                    ..Default::default()
+                                })
+                                .insert(GameEntity);
                         });
                     parent
                         .spawn_bundle(ButtonBundle {
@@ -256,28 +277,32 @@ fn ui(
                             material: button_material.normal.clone(),
                             ..Default::default()
                         })
+                        .insert(GameEntity)
                         .insert(AddBoxButton)
                         .with_children(|parent| {
-                            parent.spawn_bundle(TextBundle {
-                                style: Style {
-                                    align_self: AlignSelf::Center,
-                                    margin: Rect::all(Val::Px(5.0)),
-                                    ..Default::default()
-                                },
-                                text: Text::with_section(
-                                    "Add Box",
-                                    TextStyle {
-                                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                        font_size: 30.0,
-                                        color: Color::WHITE,
+                            parent
+                                .spawn_bundle(TextBundle {
+                                    style: Style {
+                                        align_self: AlignSelf::Center,
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        ..Default::default()
                                     },
-                                    Default::default(),
-                                ),
-                                ..Default::default()
-                            });
+                                    text: Text::with_section(
+                                        "Add Box",
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: 30.0,
+                                            color: Color::WHITE,
+                                        },
+                                        Default::default(),
+                                    ),
+                                    ..Default::default()
+                                })
+                                .insert(GameEntity);
                         });
                 })
-                .insert(GameMenu);
+                .insert(GameMenu)
+                .insert(GameEntity);
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {
@@ -292,34 +317,105 @@ fn ui(
                     material: materials.add(Color::rgb(0.1, 0.5, 0.1).into()),
                     ..Default::default()
                 })
+                .insert(GameEntity)
                 .with_children(|parent| {
                     parent
-                        .spawn_bundle(ButtonBundle {
+                        .spawn_bundle(NodeBundle {
                             style: Style {
-                                margin: Rect::all(Val::Px(5.0)),
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
+                                size: Size::new(Val::Percent(100.0), Val::Auto),
+                                border: Rect::all(Val::Px(3.0)),
+                                justify_content: JustifyContent::FlexStart,
+                                flex_direction: FlexDirection::Row,
+                                align_items: AlignItems::FlexStart,
+                                align_self: AlignSelf::FlexStart,
                                 ..Default::default()
                             },
-                            material: button_material.normal.clone(),
-
+                            material: materials.add(Color::rgb(0.1, 0.5, 0.1).into()),
                             ..Default::default()
                         })
-                        .insert(PauseButton)
+                        .insert(GameEntity)
                         .with_children(|parent| {
                             parent
-                                .spawn_bundle(ImageBundle {
+                                .spawn_bundle(ButtonBundle {
                                     style: Style {
-                                        size: Size::new(Val::Px(50.0), Val::Auto),
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
                                         ..Default::default()
                                     },
-                                    material: materials
-                                        .add(asset_server.load("textures/pause.png").into()),
+                                    material: button_material.normal.clone(),
+
                                     ..Default::default()
                                 })
-                                .insert(PauseTexture)
-                                .insert(Interaction::default());
-                        });
+                                .insert(PauseButton)
+                                .insert(GameEntity)
+                                .with_children(|parent| {
+                                    parent
+                                        .spawn_bundle(ImageBundle {
+                                            style: Style {
+                                                size: Size::new(Val::Px(50.0), Val::Auto),
+                                                ..Default::default()
+                                            },
+                                            material: materials.add(
+                                                asset_server.load("textures/pause.png").into(),
+                                            ),
+                                            ..Default::default()
+                                        })
+                                        .insert(PauseTexture)
+                                        .insert(GameEntity)
+                                        .insert(Interaction::default());
+                                });
+                            parent
+                                .spawn_bundle(ButtonBundle {
+                                    style: Style {
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..Default::default()
+                                    },
+                                    material: button_material.normal.clone(),
+
+                                    ..Default::default()
+                                })
+                                .insert(PlayButton)
+                                .insert(GameEntity)
+                                .with_children(|parent| {
+                                    parent
+                                        .spawn_bundle(ImageBundle {
+                                            style: Style {
+                                                size: Size::new(Val::Px(50.0), Val::Auto),
+                                                ..Default::default()
+                                            },
+                                            material: materials
+                                                .add(asset_server.load("textures/play.png").into()),
+                                            ..Default::default()
+                                        })
+                                        .insert(PlayTexture)
+                                        .insert(GameEntity)
+                                        .insert(Interaction::default());
+                                });
+                            parent
+                                .spawn_bundle(TextBundle {
+                                    style: Style {
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        ..Default::default()
+                                    },
+                                    text: Text::with_section(
+                                        format!("x 1"),
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: 30.0,
+                                            color: Color::WHITE,
+                                        },
+                                        Default::default(),
+                                    ),
+                                    ..Default::default()
+                                })
+                                .insert(GameEntity)
+                                .insert(ShowSpeed);
+                        })
+                        .insert(GameEntity);
+
                     parent
                         .spawn_bundle(ButtonBundle {
                             style: Style {
@@ -332,42 +428,33 @@ fn ui(
 
                             ..Default::default()
                         })
-                        .insert(PlayButton)
+                        .insert(LeaveButton)
+                        .insert(GameEntity)
                         .with_children(|parent| {
                             parent
-                                .spawn_bundle(ImageBundle {
+                                .spawn_bundle(TextBundle {
                                     style: Style {
-                                        size: Size::new(Val::Px(50.0), Val::Auto),
+                                        margin: Rect::all(Val::Px(5.0)),
                                         ..Default::default()
                                     },
-                                    material: materials
-                                        .add(asset_server.load("textures/play.png").into()),
+                                    text: Text::with_section(
+                                        "Exit".to_string(),
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: 30.0,
+                                            color: Color::WHITE,
+                                        },
+                                        Default::default(),
+                                    ),
                                     ..Default::default()
                                 })
-                                .insert(PlayTexture)
-                                .insert(Interaction::default());
+                                .insert(LeaveText)
+                                .insert(GameEntity);
                         });
-
-                    parent
-                        .spawn_bundle(TextBundle {
-                            style: Style {
-                                margin: Rect::all(Val::Px(5.0)),
-                                ..Default::default()
-                            },
-                            text: Text::with_section(
-                                format!("x 1"),
-                                TextStyle {
-                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: 30.0,
-                                    color: Color::WHITE,
-                                },
-                                Default::default(),
-                            ),
-                            ..Default::default()
-                        })
-                        .insert(ShowSpeed);
-                });
-        });
+                })
+                .insert(GameEntity);
+        })
+        .insert(GameEntity);
     commands.spawn().insert(gui_state);
 }
 fn show_speed(
@@ -449,6 +536,42 @@ fn pause_button(
         }
     };
 }
+fn leave_button(
+    button_materials: Res<ButtonMaterial>,
+    mut state: ResMut<State<GameState>>,
+    mut queries: QuerySet<(
+        Query<&Interaction, (With<Interaction>, Or<(With<LeaveButton>, With<LeaveText>)>)>,
+        Query<&mut Handle<ColorMaterial>, With<LeaveButton>>,
+    )>,
+) {
+    let interaction = queries
+        .q0()
+        .iter()
+        .fold(Interaction::None, |acc, x| match acc {
+            Interaction::Clicked => Interaction::Clicked,
+            Interaction::Hovered => match x {
+                Interaction::Clicked => Interaction::Clicked,
+                _ => Interaction::Hovered,
+            },
+            Interaction::None => *x,
+        })
+        .clone();
+    for mut material in queries.q1_mut().iter_mut() {
+        match interaction {
+            Interaction::Clicked => {
+                *material = button_materials.pressed.clone();
+                state.set(GameState::Menu);
+            }
+            Interaction::Hovered => {
+                *material = button_materials.hovered.clone();
+            }
+            Interaction::None => {
+                *material = button_materials.normal.clone();
+            }
+        };
+    }
+}
+
 fn play_button(
     button_materials: Res<ButtonMaterial>,
     mut gui_state_query: Query<&mut GuiState, ()>,
@@ -644,5 +767,17 @@ fn run_ui(
         for mut text in query.iter_mut() {
             text.sections[0].value = format!("{}", viscosity);
         }
+    }
+}
+fn cleanup_ui(
+    mut commands: Commands,
+    mut query: Query<Entity, With<GameEntity>>,
+    mut gui_state_query: Query<Entity, With<GuiState>>,
+) {
+    for e in query.iter_mut() {
+        commands.entity(e).despawn();
+    }
+    for e in gui_state_query.iter_mut() {
+        commands.entity(e).despawn();
     }
 }

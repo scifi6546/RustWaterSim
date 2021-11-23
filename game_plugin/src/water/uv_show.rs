@@ -1,5 +1,5 @@
 use super::{FiniteSolver, WATER_SIZE};
-use crate::prelude::GuiState;
+use crate::prelude::{GameEntity, GuiState};
 use bevy::{
     prelude::*,
     render::{
@@ -282,6 +282,7 @@ pub fn build_uv_cubes(
             mesh: meshes.add(cube),
             ..Default::default()
         })
+        .insert(GameEntity)
         .insert(VShow);
 }
 pub fn run_uv_cubes(

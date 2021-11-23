@@ -18,7 +18,7 @@ use game_menu::GameMenuPlugin;
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
 pub mod prelude {
-    pub use super::game_menu::GuiState;
+    pub use super::game_menu::{GameEntity, GuiState};
     pub use super::menu::SelectStartupInfo;
     pub use super::player::CameraLabel;
     pub use super::water::{

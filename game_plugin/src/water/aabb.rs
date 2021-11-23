@@ -1,4 +1,5 @@
 use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
+use crate::prelude::GameEntity;
 use bevy::prelude::*;
 use nalgebra::Vector2;
 pub struct AABBMaterial {
@@ -83,6 +84,7 @@ pub fn build_barrier(
         ))
         .insert_bundle(bevy_mod_picking::PickableBundle::default())
         .insert(bevy_transform_gizmo::GizmoTransformable)
+        .insert(GameEntity)
         .insert(aabb);
 }
 pub fn aabb_transform(

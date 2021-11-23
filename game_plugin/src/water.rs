@@ -1,4 +1,4 @@
-use crate::prelude::{CameraLabel, GuiState, SelectStartupInfo};
+use crate::prelude::{CameraLabel, GameEntity, GuiState, SelectStartupInfo};
 use crate::GameState;
 use bevy::{prelude::*, render::mesh::Indices};
 pub mod aabb;
@@ -194,6 +194,7 @@ fn spawn_water_system(
         })
         .insert(water)
         .insert(info)
+        .insert(GameEntity)
         .insert(WaterMarker);
     for barrier in barriers.drain(..) {
         aabb::build_barrier(
