@@ -1,5 +1,5 @@
 use crate::loading::FontAssets;
-use crate::prelude::CONDITIONS;
+use crate::prelude::{ButtonMaterial, CONDITIONS, GUI_STYLE};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -9,7 +9,7 @@ pub struct MenuPlugin;
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        app.init_resource::<ButtonMaterials>()
+        app.init_resource::<ButtonMaterial>()
             .add_system_set(SystemSet::on_enter(GameState::Menu).with_system(setup_menu.system()))
             .add_system_set(
                 SystemSet::on_update(GameState::Menu).with_system(conditions_button.system()),
@@ -18,20 +18,6 @@ impl Plugin for MenuPlugin {
     }
 }
 
-struct ButtonMaterials {
-    normal: Handle<ColorMaterial>,
-    hovered: Handle<ColorMaterial>,
-}
-
-impl FromWorld for ButtonMaterials {
-    fn from_world(world: &mut World) -> Self {
-        let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
-        ButtonMaterials {
-            normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
-        }
-    }
-}
 #[derive(Debug, Clone)]
 pub struct SelectStartupInfo {
     /// index in CONDITIONS to spawn
@@ -45,7 +31,7 @@ fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    button_materials: Res<ButtonMaterials>,
+    button_materials: Res<ButtonMaterial>,
 ) {
     commands.spawn_bundle(UiCameraBundle::default());
     commands
@@ -58,7 +44,7 @@ fn setup_menu(
                 align_items: AlignItems::Center,
                 ..Default::default()
             },
-            material: materials.add(Color::rgb(0.5, 0.5, 0.1).into()),
+            material: button_materials.main_menu_bg.clone(),
             ..Default::default()
         })
         .with_children(|parent| {
@@ -88,7 +74,7 @@ fn setup_menu(
                                     style: TextStyle {
                                         font: font_assets.fira_sans.clone(),
                                         font_size: 40.0,
-                                        color: Color::rgb(0.9, 0.9, 0.9),
+                                        color: GUI_STYLE.button_text_color,
                                     },
                                 }],
                                 alignment: Default::default(),
@@ -102,7 +88,7 @@ fn setup_menu(
 
 fn conditions_button(
     mut commands: Commands,
-    button_materials: Res<ButtonMaterials>,
+    button_materials: Res<ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
     mut interaction_query: Query<
         (&Interaction, &mut Handle<ColorMaterial>, &SelectStartupInfo),

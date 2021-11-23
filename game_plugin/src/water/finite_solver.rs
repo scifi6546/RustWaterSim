@@ -91,18 +91,20 @@ impl FiniteSolver {
                 volume += self.h.get(x, y);
             }
         }
+
         (
             &self.h,
-            vec![
-                SolveInfo {
-                    name: "max delta Height",
-                    data: format!("{:.2e}", max_delta),
-                },
-                SolveInfo {
-                    name: "Volume",
-                    data: format!("{:.2e}", volume),
-                },
-            ],
+            vec![], /*
+                    vec![
+                        SolveInfo {
+                            name: "max delta Height",
+                            data: format!("{:.2e}", max_delta),
+                        },
+                        SolveInfo {
+                            name: "Volume",
+                            data: format!("{:.2e}", volume),
+                        },
+                    ],*/
         )
     }
     /// output reference to h data
@@ -350,22 +352,26 @@ impl FiniteSolver {
             vec![],
         )
     }
-    pub fn wave_wall() -> (Self, Vec<AABBBArrier>) {
-        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
-        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
+    pub fn bridge_poles() -> (Self, Vec<AABBBArrier>) {
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(301, 100));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(300, 101));
         let h = Grid::from_fn(
             |x, y| {
-                if x > 5 && x < 20 {
-                    if y > 5 && y < 95 {
-                        1.5
-                    } else {
-                        1.0
-                    }
+                let top_height = 1.5;
+                let base_height = 1.0;
+                let top_cutoff = 10;
+                let slope = 0.5;
+                let slope_cutoff = 40;
+                let slope = (top_height - base_height) / (top_cutoff as f32 - slope_cutoff as f32);
+                if x < top_cutoff {
+                    top_height
+                } else if x < slope_cutoff as usize {
+                    slope * (x as f32 - top_cutoff as f32) + top_height
                 } else {
-                    1.0
+                    base_height
                 }
             },
-            Vector2::new(100, 100),
+            Vector2::new(300, 100),
         );
         (
             Self {
@@ -375,7 +381,24 @@ impl FiniteSolver {
                 sources: vec![],
                 t: 0,
             },
-            vec![],
+            vec![
+                AABBBArrier {
+                    top_right: Vector2::new(50, 15),
+                    bottom_left: Vector2::new(45, 20),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(50, 40),
+                    bottom_left: Vector2::new(45, 45),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(50, 65),
+                    bottom_left: Vector2::new(45, 70),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(50, 90),
+                    bottom_left: Vector2::new(45, 95),
+                },
+            ],
         )
     }
     pub fn barrier() -> (Self, Vec<AABBBArrier>) {

@@ -187,7 +187,7 @@ fn spawn_water_system(
     let water_dimensions = Vector2::new(water.h().x(), water.h().y());
     commands
         .spawn_bundle(PbrBundle {
-            material: materials.add(Color::rgb(0.0, 0.5, 0.0).into()),
+            material: materials.add(Color::rgb(0.25, 0.25, 0.7).into()),
             transform: transform,
             mesh: meshes.add(water.build_mesh(&barriers)),
             ..Default::default()
@@ -234,7 +234,7 @@ pub const CONDITIONS: &[InitialConditions] = &[
     },
     InitialConditions {
         name: "Wall",
-        build_water_fn: || finite_solver::FiniteSolver::wave_wall(),
+        build_water_fn: || finite_solver::FiniteSolver::bridge_poles(),
     },
 ];
 fn water_simulation(

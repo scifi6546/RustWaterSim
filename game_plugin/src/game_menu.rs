@@ -5,6 +5,74 @@ use crate::GameState;
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::cmp::max;
+pub struct GuiStyle {
+    pub button_normal_color: Color,
+    pub button_hover_color: Color,
+    pub button_pressed_color: Color,
+    pub side_panel_color: Color,
+    pub bottom_panel_color: Color,
+    pub bottom_subpanel_color: Color,
+    pub button_text_color: Color,
+    pub text_color: Color,
+    pub main_menu_bg_color: Color,
+}
+pub const GUI_STYLE: GuiStyle = GuiStyle {
+    button_normal_color: Color::Rgba {
+        red: 0.25,
+        green: 0.25,
+        blue: 0.25,
+        alpha: 1.0,
+    },
+    button_hover_color: Color::Rgba {
+        red: 0.4,
+        green: 0.4,
+        blue: 0.4,
+        alpha: 1.0,
+    },
+    button_pressed_color: Color::Rgba {
+        red: 0.3,
+        green: 0.3,
+        blue: 0.3,
+        alpha: 1.0,
+    },
+    side_panel_color: Color::Rgba {
+        red: 0.2,
+        green: 0.2,
+        blue: 0.2,
+        alpha: 1.0,
+    },
+    bottom_panel_color: Color::Rgba {
+        red: 0.17,
+        green: 0.17,
+        blue: 0.17,
+        alpha: 1.0,
+    },
+    text_color: Color::Rgba {
+        red: 0.9,
+        green: 0.6,
+        blue: 0.2,
+        alpha: 1.0,
+    },
+    bottom_subpanel_color: Color::Rgba {
+        red: 0.9,
+        green: 0.2,
+        blue: 0.2,
+        alpha: 0.0,
+    },
+    button_text_color: Color::Rgba {
+        red: 0.9,
+        green: 0.6,
+        blue: 0.2,
+        alpha: 1.0,
+    },
+    main_menu_bg_color: Color::Rgba {
+        red: 0.1,
+        green: 0.1,
+        blue: 0.1,
+        alpha: 1.0,
+    },
+};
+
 struct GameMenu;
 pub struct GameMenuPlugin;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
@@ -46,19 +114,29 @@ impl Plugin for GameMenuPlugin {
 struct ViscocityChange;
 struct SolveInfoLabel;
 
-struct ButtonMaterial {
-    normal: Handle<ColorMaterial>,
-    hovered: Handle<ColorMaterial>,
-    pressed: Handle<ColorMaterial>,
+pub struct ButtonMaterial {
+    pub normal: Handle<ColorMaterial>,
+    pub hovered: Handle<ColorMaterial>,
+    pub pressed: Handle<ColorMaterial>,
+    pub main_menu_bg: Handle<ColorMaterial>,
+    pub side_panel: Handle<ColorMaterial>,
+    pub bottom_panel: Handle<ColorMaterial>,
+    pub bottom_subpanel: Handle<ColorMaterial>,
+    pub button_text: Handle<ColorMaterial>,
 }
 impl FromWorld for ButtonMaterial {
     fn from_world(world: &mut World) -> Self {
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 
         Self {
-            normal: materials.add(Color::rgb(0.15, 0.15, 0.15).into()),
-            hovered: materials.add(Color::rgb(0.25, 0.25, 0.25).into()),
-            pressed: materials.add(Color::rgb(0.35, 0.35, 0.35).into()),
+            normal: materials.add(GUI_STYLE.button_normal_color.into()),
+            hovered: materials.add(GUI_STYLE.button_hover_color.into()),
+            pressed: materials.add(GUI_STYLE.button_pressed_color.into()),
+            main_menu_bg: materials.add(GUI_STYLE.main_menu_bg_color.into()),
+            side_panel: materials.add(GUI_STYLE.side_panel_color.into()),
+            bottom_panel: materials.add(GUI_STYLE.bottom_panel_color.into()),
+            bottom_subpanel: materials.add(GUI_STYLE.bottom_subpanel_color.into()),
+            button_text: materials.add(GUI_STYLE.button_text_color.into()),
         }
     }
 }
@@ -132,48 +210,11 @@ fn ui(
                         align_self: AlignSelf::Stretch,
                         ..Default::default()
                     },
-                    material: materials.add(Color::rgb(0.5, 0.5, 0.1).into()),
+                    material: button_material.side_panel.clone(),
                     ..Default::default()
                 })
                 .insert(GameEntity)
                 .with_children(|parent| {
-                    parent
-                        .spawn_bundle(TextBundle {
-                            style: Style {
-                                margin: Rect::all(Val::Px(5.0)),
-                                ..Default::default()
-                            },
-                            text: Text::with_section(
-                                "Hello box",
-                                TextStyle {
-                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: 30.0,
-                                    color: Color::WHITE,
-                                },
-                                Default::default(),
-                            ),
-                            ..Default::default()
-                        })
-                        .insert(GameEntity);
-                    parent
-                        .spawn_bundle(TextBundle {
-                            style: Style {
-                                margin: Rect::all(Val::Px(5.0)),
-                                align_self: AlignSelf::Center,
-                                ..Default::default()
-                            },
-                            text: Text::with_section(
-                                "Viscosity",
-                                TextStyle {
-                                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                                    font_size: 30.0,
-                                    color: Color::WHITE,
-                                },
-                                Default::default(),
-                            ),
-                            ..Default::default()
-                        })
-                        .insert(GameEntity);
                     parent
                         .spawn_bundle(TextBundle {
                             style: Style {
@@ -186,7 +227,7 @@ fn ui(
                                 TextStyle {
                                     font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                     font_size: 30.0,
-                                    color: Color::WHITE,
+                                    color: GUI_STYLE.text_color,
                                 },
                                 Default::default(),
                             ),
@@ -220,7 +261,7 @@ fn ui(
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
-                                            color: Color::WHITE,
+                                            color: GUI_STYLE.button_text_color.clone(),
                                         },
                                         Default::default(),
                                     ),
@@ -258,7 +299,7 @@ fn ui(
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
-                                            color: Color::WHITE,
+                                            color: GUI_STYLE.button_text_color,
                                         },
                                         Default::default(),
                                     ),
@@ -292,7 +333,7 @@ fn ui(
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
-                                            color: Color::WHITE,
+                                            color: GUI_STYLE.button_text_color,
                                         },
                                         Default::default(),
                                     ),
@@ -314,7 +355,7 @@ fn ui(
                         align_self: AlignSelf::FlexStart,
                         ..Default::default()
                     },
-                    material: materials.add(Color::rgb(0.1, 0.5, 0.1).into()),
+                    material: button_material.bottom_panel.clone(),
                     ..Default::default()
                 })
                 .insert(GameEntity)
@@ -330,7 +371,7 @@ fn ui(
                                 align_self: AlignSelf::FlexStart,
                                 ..Default::default()
                             },
-                            material: materials.add(Color::rgb(0.1, 0.5, 0.1).into()),
+                            material: button_material.bottom_subpanel.clone(),
                             ..Default::default()
                         })
                         .insert(GameEntity)
@@ -405,7 +446,7 @@ fn ui(
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
-                                            color: Color::WHITE,
+                                            color: GUI_STYLE.text_color,
                                         },
                                         Default::default(),
                                     ),
@@ -442,7 +483,7 @@ fn ui(
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
-                                            color: Color::WHITE,
+                                            color: GUI_STYLE.button_text_color,
                                         },
                                         Default::default(),
                                     ),
@@ -504,11 +545,7 @@ fn pause_button(
                 Interaction::Hovered => Interaction::Hovered,
                 Interaction::None => Interaction::Hovered,
             },
-            Interaction::None => match x {
-                Interaction::Clicked => Interaction::Clicked,
-                Interaction::Hovered => Interaction::Hovered,
-                Interaction::None => Interaction::None,
-            },
+            Interaction::None => *x,
         });
     let mut button_mat = if let Some(mat) = queries.q1_mut().iter_mut().next() {
         mat
@@ -517,10 +554,11 @@ fn pause_button(
     };
     match interaction {
         Interaction::Clicked => {
-            *button_mat = button_materials.pressed.clone();
             if gui_state.water_speed >= 1 {
                 gui_state.water_speed = 0;
+                *button_mat = button_materials.pressed.clone();
             } else {
+                *button_mat = button_materials.hovered.clone();
                 gui_state.water_speed = 1;
             }
         }
