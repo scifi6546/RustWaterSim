@@ -1,0 +1,1 @@
+X^{n+1} = X^n+\frac{\Delta t}{2} F\left(X^{n+1/2}\right)

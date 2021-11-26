@@ -105,6 +105,7 @@ impl Plugin for GameMenuPlugin {
                 .with_system(show_speed.system())
                 .with_system(solve_info.system())
                 .with_system(leave_button.system())
+                .with_system(save_water.system())
                 .with_system(add_box_button.system()),
         )
         .add_system_set(SystemSet::on_exit(GameState::Playing).with_system(cleanup_ui.system()));
@@ -177,6 +178,7 @@ struct ShowVelocities;
 struct ShowWater;
 struct LeaveButton;
 struct LeaveText;
+struct SaveWaterButton;
 /// marks that belongs to game::playing state. will be destroyed at end of this state
 pub struct GameEntity;
 fn ui(
@@ -330,6 +332,41 @@ fn ui(
                                     },
                                     text: Text::with_section(
                                         "Add Box",
+                                        TextStyle {
+                                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                                            font_size: 30.0,
+                                            color: GUI_STYLE.button_text_color,
+                                        },
+                                        Default::default(),
+                                    ),
+                                    ..Default::default()
+                                })
+                                .insert(GameEntity);
+                        });
+                    #[cfg(feature = "native")]
+                    parent
+                        .spawn_bundle(ButtonBundle {
+                            style: Style {
+                                margin: Rect::all(Val::Px(5.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                ..Default::default()
+                            },
+                            material: button_material.normal.clone(),
+                            ..Default::default()
+                        })
+                        .insert(GameEntity)
+                        .insert(SaveWaterButton)
+                        .with_children(|parent| {
+                            parent
+                                .spawn_bundle(TextBundle {
+                                    style: Style {
+                                        align_self: AlignSelf::Center,
+                                        margin: Rect::all(Val::Px(5.0)),
+                                        ..Default::default()
+                                    },
+                                    text: Text::with_section(
+                                        "Export Water Heights",
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
@@ -728,6 +765,31 @@ fn show_velocity_button(
                 if gui_state.show_water {
                     *material = button_materials.pressed.clone();
                 }
+            }
+        }
+    }
+}
+fn save_water(
+    button_materials: Res<ButtonMaterial>,
+    solver_query: Query<&FiniteSolver, With<FiniteSolver>>,
+    mut query: Query<
+        (&Interaction, &mut Handle<ColorMaterial>),
+        (With<SaveWaterButton>, Changed<Interaction>),
+    >,
+) {
+    for (interaction, mut mat) in query.iter_mut() {
+        match *interaction {
+            Interaction::Clicked => {
+                *mat = button_materials.pressed.clone();
+                if let Some(solver) = solver_query.iter().next() {
+                    crate::file_save::save(&solver.numpy_data());
+                }
+            }
+            Interaction::Hovered => {
+                *mat = button_materials.hovered.clone();
+            }
+            Interaction::None => {
+                *mat = button_materials.normal.clone();
             }
         }
     }

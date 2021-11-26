@@ -217,6 +217,10 @@ pub const CONDITIONS: &[InitialConditions] = &[
         build_water_fn: || finite_solver::FiniteSolver::barrier(),
     },
     InitialConditions {
+        name: "Double Slit Large",
+        build_water_fn: || finite_solver::FiniteSolver::barrier_long(),
+    },
+    InitialConditions {
         name: "Droplet",
         build_water_fn: || finite_solver::FiniteSolver::droplet(),
     },

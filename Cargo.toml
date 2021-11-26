@@ -32,6 +32,7 @@ native = [
 
 web = [
     "bevy_webgl2",
+    "web-sys"
 ]
 
 dev = [
@@ -42,6 +43,7 @@ dev = [
 [dependencies]
 bevy = { version = "0.5.0", default-features = false }
 game_plugin = { path = "game_plugin" }
+web-sys = { version="0.3", optional = true }
 winit = "0.24.0"
 
 bevy_webgl2 = { version = "0.5.0", optional = true }

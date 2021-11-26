@@ -1,0 +1,6 @@
+\frac{\partial u_{i,j}}{\partial t} = -\frac{h_{i+1,j}-h_{i,j}}{\Delta x}\quad(1),\\
+\frac{\partial v_{i,j}}{\partial t} = -\frac{h_{i,j+1}-h_{i,j}}{\Delta y}\quad(2),\\
+\frac{\partial h_{i,j}}{\partial t} = -\frac{h_{i+\frac{1}{2},j}u_{i,j}-h_{i-\frac{1}{2},j}u_{i-1,j}}{\Delta x}
+-\frac{h_{i,j+\frac{1}{2}}u_{i,j}-h_{i,j-\frac{1}{2}}u_{i,j-1}}{\Delta x}\quad(3),\\
+h_{i+\frac{1}{2},j} = \frac{\left(h_{i+1,j}+h_{i,j}\right)}{2}\quad(4),\\
+h_{i,j+\frac{1}{2}} = \frac{\left(h_{i,j+1}+h_{i,j}\right)}{2}\quad(5),\\

@@ -249,6 +249,36 @@ impl FiniteSolver {
         }
         max_delta
     }
+    pub fn numpy_data(&self) -> Vec<u8> {
+        error!("to implement numpy");
+        let header_str = format!(
+            "{{'descr': '<f4', 'fortran_order': False, 'shape': ({}, {}), }}",
+            self.h.x(),
+            self.h.y()
+        );
+        debug!("numpy header: {}", header_str);
+        let header_bytes = header_str.as_bytes();
+        let header_len = header_bytes.len() as u16;
+        let mut out_data = vec![
+            0x93, 'N' as u8, 'U' as u8, 'M' as u8, 'P' as u8, 'Y' as u8, 0x01, 0x00,
+        ];
+        for byte in header_len.to_le_bytes().iter() {
+            out_data.push(*byte);
+        }
+        for byte in header_bytes.iter() {
+            out_data.push(*byte);
+        }
+        for x in 0..self.h.x() {
+            for y in 0..self.h.y() {
+                let h = self.h.get(x, y);
+                for byte in h.to_ne_bytes().iter() {
+                    out_data.push(*byte);
+                }
+            }
+        }
+
+        return out_data;
+    }
     pub fn droplet() -> (Self, Vec<AABBBArrier>) {
         let h = Grid::from_fn(
             |x, y| {
@@ -353,8 +383,8 @@ impl FiniteSolver {
         )
     }
     pub fn bridge_poles() -> (Self, Vec<AABBBArrier>) {
-        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(301, 100));
-        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(300, 101));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 300));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 301));
         let h = Grid::from_fn(
             |x, y| {
                 let top_height = 1.5;
@@ -363,15 +393,15 @@ impl FiniteSolver {
                 let slope = 0.5;
                 let slope_cutoff = 40;
                 let slope = (top_height - base_height) / (top_cutoff as f32 - slope_cutoff as f32);
-                if x < top_cutoff {
+                if y < top_cutoff {
                     top_height
-                } else if x < slope_cutoff as usize {
-                    slope * (x as f32 - top_cutoff as f32) + top_height
+                } else if y < slope_cutoff as usize {
+                    slope * (y as f32 - top_cutoff as f32) + top_height
                 } else {
                     base_height
                 }
             },
-            Vector2::new(300, 100),
+            Vector2::new(100, 300),
         );
         (
             Self {
@@ -383,20 +413,20 @@ impl FiniteSolver {
             },
             vec![
                 AABBBArrier {
-                    top_right: Vector2::new(50, 15),
-                    bottom_left: Vector2::new(45, 20),
+                    top_right: Vector2::new(20, 50),
+                    bottom_left: Vector2::new(15, 45),
                 },
                 AABBBArrier {
-                    top_right: Vector2::new(50, 40),
-                    bottom_left: Vector2::new(45, 45),
+                    top_right: Vector2::new(45, 50),
+                    bottom_left: Vector2::new(40, 45),
                 },
                 AABBBArrier {
-                    top_right: Vector2::new(50, 65),
-                    bottom_left: Vector2::new(45, 70),
+                    top_right: Vector2::new(70, 50),
+                    bottom_left: Vector2::new(65, 45),
                 },
                 AABBBArrier {
-                    top_right: Vector2::new(50, 90),
-                    bottom_left: Vector2::new(45, 95),
+                    top_right: Vector2::new(95, 50),
+                    bottom_left: Vector2::new(90, 45),
                 },
             ],
         )
@@ -406,7 +436,7 @@ impl FiniteSolver {
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
                 if r <= 10.0 {
-                    (10.0 - r) / 10.0 + 1.0
+                    2.0 * (10.0 - r) / 10.0 + 1.0
                 } else {
                     1.0
                 }
@@ -425,16 +455,54 @@ impl FiniteSolver {
             },
             vec![
                 AABBBArrier {
-                    top_right: Vector2::new(30, 80),
-                    bottom_left: Vector2::new(-10, 70),
+                    top_right: Vector2::new(30, 110),
+                    bottom_left: Vector2::new(-10, 109),
                 },
                 AABBBArrier {
-                    top_right: Vector2::new(60, 80),
-                    bottom_left: Vector2::new(40, 70),
+                    top_right: Vector2::new(65, 110),
+                    bottom_left: Vector2::new(35, 109),
                 },
                 AABBBArrier {
-                    top_right: Vector2::new(110, 80),
-                    bottom_left: Vector2::new(70, 70),
+                    top_right: Vector2::new(110, 110),
+                    bottom_left: Vector2::new(70, 109),
+                },
+            ],
+        )
+    }
+    pub fn barrier_long() -> (Self, Vec<AABBBArrier>) {
+        let h = Grid::from_fn(
+            |x, y| {
+                let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
+                if r <= 10.0 {
+                    2.0 * (10.0 - r) / 10.0 + 1.0
+                } else {
+                    1.0
+                }
+            },
+            Vector2::new(100, 1000),
+        );
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 1000));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 1001));
+        (
+            Self {
+                h,
+                u,
+                v,
+                sources: vec![],
+                t: 0,
+            },
+            vec![
+                AABBBArrier {
+                    top_right: Vector2::new(30, 110),
+                    bottom_left: Vector2::new(-10, 109),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(65, 110),
+                    bottom_left: Vector2::new(35, 109),
+                },
+                AABBBArrier {
+                    top_right: Vector2::new(110, 110),
+                    bottom_left: Vector2::new(70, 109),
                 },
             ],
         )
