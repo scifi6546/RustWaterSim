@@ -3,6 +3,7 @@ mod file_save;
 mod game_menu;
 mod input;
 mod loading;
+mod markdown;
 mod menu;
 mod player;
 mod water;
@@ -20,6 +21,7 @@ use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPl
 use water::WaterPlugin;
 pub mod prelude {
     pub use super::game_menu::{ButtonMaterial, GameEntity, GuiState, GuiStyle, GUI_STYLE};
+    pub use super::markdown::{BuiltParentLabel, DocumentGuiParent, GuiParent};
     pub use super::menu::SelectStartupInfo;
     pub use super::player::CameraLabel;
     pub use super::water::{
@@ -34,10 +36,12 @@ pub mod prelude {
 enum GameState {
     // During the loading State the LoadingPlugin will load our assets
     Loading,
+    BuildGui,
     // During this State the actual game logic is executed
     Playing,
     // Here the menu is drawn and waiting for player interaction
     Menu,
+    Page { number: u32 },
 }
 
 pub struct GamePlugin;
@@ -51,6 +55,7 @@ impl Plugin for GamePlugin {
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(input::CameraInput)
+            .add_plugin(markdown::DocumentPlugin)
             .add_plugin(LookTransformPlugin)
             .add_plugin(OrbitCameraPlugin)
             .add_plugin(WaterPlugin)
@@ -61,6 +66,10 @@ impl Plugin for GamePlugin {
         {
             app.add_plugin(FrameTimeDiagnosticsPlugin::default())
                 .add_plugin(LogDiagnosticsPlugin::default());
+        }
+        #[cfg(feature = "native")]
+        {
+            app.add_plugin(bevy_inspector_egui::WorldInspectorPlugin::new());
         }
     }
 }

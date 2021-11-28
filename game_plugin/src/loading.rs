@@ -9,7 +9,7 @@ pub struct LoadingPlugin;
 /// If interested, take a look at https://bevy-cheatbook.github.io/features/assets.html
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut AppBuilder) {
-        AssetLoader::new(GameState::Loading, GameState::Menu)
+        AssetLoader::new(GameState::Loading, GameState::BuildGui)
             .with_collection::<FontAssets>()
             .with_collection::<TextureAssets>()
             .build(app);

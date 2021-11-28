@@ -17,6 +17,7 @@ default = [
 
 native = [
     "bevy/bevy_wgpu",
+    "bevy-inspector-egui"
 ]
 
 [dependencies]
@@ -27,3 +28,5 @@ bevy_mod_picking = {path="../bevy_mod_picking"}
 bevy_asset_loader = { version = "0.6.0" }
 rfd = "0.6.1"
 nalgebra = "0.29.0"
+pulldown-cmark = "0.8.0"
+bevy-inspector-egui = {version = "0.6.1",optional=true}

@@ -66,7 +66,7 @@ impl FiniteSolver {
     const DY: f32 = 999.0;
     const G: f32 = 9.81;
     const DT: f32 = 0.1;
-    const VISC: f32 = 0.0;
+    const VISC: f32 = 0.9;
 
     /// gets mean height of water
     pub fn mean_height(&self) -> f32 {
@@ -171,7 +171,6 @@ impl FiniteSolver {
                             let hxn1 = heights.get(x - 1, y);
                             let hxp1 = heights.get(x, y);
                             *u.get_mut(x, y) += Self::G * (delta_t / Self::DX) * (hxp1 - hxn1);
-                            *u.get_mut(x, y) *= 1.0 - Self::VISC * delta_t;
                         }
                     }
                     if x < heights.x() {
@@ -185,7 +184,6 @@ impl FiniteSolver {
                             let hyn1 = heights.get(x, y - 1);
                             let hyp1 = heights.get(x, y);
                             *v.get_mut(x, y) += Self::G * (delta_t / Self::DY) * (hyp1 - hyn1);
-                            *v.get_mut(x, y) *= 1.0 - Self::VISC * delta_t;
                         }
                     }
                 }
