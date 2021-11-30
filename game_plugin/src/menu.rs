@@ -1,5 +1,8 @@
 use crate::loading::FontAssets;
-use crate::prelude::{BuiltParentLabel, ButtonMaterial, GuiParent, CONDITIONS, GUI_STYLE};
+use crate::prelude::{
+    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, GuiParent,
+    CONDITIONS, GUI_STYLE,
+};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -17,9 +20,11 @@ impl Plugin for MenuPlugin {
                     .after(BuiltParentLabel),
             )
             .add_system_set(
-                SystemSet::on_update(GameState::Menu).with_system(conditions_button.system()),
+                SystemSet::on_update(GameState::Menu)
+                    .with_system(conditions_button.system())
+                    .with_system(nav_system.system()),
             )
-            .add_system_set(SystemSet::on_exit(GameState::Menu).with_system(clear_ui.system()));
+            .add_system_set(SystemSet::on_exit(GameState::Menu).with_system(despawn_gui.system()));
     }
 }
 
@@ -35,14 +40,21 @@ struct SelectStartup;
 fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
+    document: Res<Document>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
     mut parent_query: Query<Entity, With<GuiParent>>,
 ) {
-    info!("building setup menu");
-    for parent in parent_query.iter_mut() {
-        info!("building based off of parent");
-        commands.entity(parent).with_children(|parent| {
+    commands.spawn_bundle(UiCameraBundle::default());
+    build_gui(
+        &mut commands,
+        &mut materials,
+        &font_assets,
+        &button_materials,
+        &document,
+        |_, _, _, parent| {
+            info!("building setup menu");
+            info!("building based off of parent");
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {
@@ -97,8 +109,8 @@ fn setup_menu(
                             });
                     }
                 });
-        });
-    }
+        },
+    );
 }
 
 fn conditions_button(

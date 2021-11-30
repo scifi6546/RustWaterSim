@@ -1,8 +1,8 @@
 use crate::prelude::{
-    build_barrier, AABBBArrier, AABBMaterial, FiniteSolver, GuiParent, SolveInfo, WaterMarker,
-    WATER_SIZE,
+    build_barrier, build_gui, despawn_gui, AABBBArrier, AABBMaterial, Document, FiniteSolver,
+    GuiParent, SolveInfo, WaterMarker, WATER_SIZE,
 };
-use crate::GameState;
+use crate::{loading::FontAssets, GameState};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::cmp::max;
@@ -18,6 +18,9 @@ pub struct GuiStyle {
     pub main_menu_bg_color: Color,
     pub nav_bar_bg_color: Color,
     pub nav_bar_button_normal: Color,
+    pub nav_bar_button_clicked: Color,
+    pub nav_bar_button_hover: Color,
+    pub page_color: Color,
 }
 pub const GUI_STYLE: GuiStyle = GuiStyle {
     button_normal_color: Color::Rgba {
@@ -86,6 +89,24 @@ pub const GUI_STYLE: GuiStyle = GuiStyle {
         blue: 0.33,
         alpha: 1.0,
     },
+    nav_bar_button_hover: Color::Rgba {
+        red: 0.35,
+        green: 0.35,
+        blue: 0.35,
+        alpha: 1.0,
+    },
+    nav_bar_button_clicked: Color::Rgba {
+        red: 0.31,
+        green: 0.31,
+        blue: 0.31,
+        alpha: 1.0,
+    },
+    page_color: Color::Rgba {
+        red: 0.9,
+        green: 0.9,
+        blue: 0.9,
+        alpha: 1.0,
+    },
 };
 
 struct GameMenu;
@@ -123,7 +144,11 @@ impl Plugin for GameMenuPlugin {
                 .with_system(save_water.system())
                 .with_system(add_box_button.system()),
         )
-        .add_system_set(SystemSet::on_exit(GameState::Playing).with_system(cleanup_ui.system()));
+        .add_system_set(
+            SystemSet::on_exit(GameState::Playing)
+                .with_system(despawn_gui.system())
+                .with_system(cleanup_ui.system()),
+        );
     }
 }
 /// Marks viscocoty change text button
@@ -141,6 +166,9 @@ pub struct ButtonMaterial {
     pub button_text: Handle<ColorMaterial>,
     pub nav_bar_bg: Handle<ColorMaterial>,
     pub nav_bar_button_normal: Handle<ColorMaterial>,
+    pub nav_bar_button_hover: Handle<ColorMaterial>,
+    pub nav_bar_button_clicked: Handle<ColorMaterial>,
+    pub page: Handle<ColorMaterial>,
 }
 impl FromWorld for ButtonMaterial {
     fn from_world(world: &mut World) -> Self {
@@ -157,6 +185,9 @@ impl FromWorld for ButtonMaterial {
             button_text: materials.add(GUI_STYLE.button_text_color.into()),
             nav_bar_bg: materials.add(GUI_STYLE.nav_bar_bg_color.into()),
             nav_bar_button_normal: materials.add(GUI_STYLE.nav_bar_button_normal.into()),
+            nav_bar_button_hover: materials.add(GUI_STYLE.nav_bar_button_hover.into()),
+            nav_bar_button_clicked: materials.add(GUI_STYLE.nav_bar_button_clicked.into()),
+            page: materials.add(GUI_STYLE.page_color.into()),
         }
     }
 }
@@ -203,14 +234,20 @@ pub struct GameEntity;
 fn ui(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    document: Res<Document>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_material: Res<ButtonMaterial>,
+    font_assets: Res<FontAssets>,
     parent_query: Query<Entity, With<GuiParent>>,
 ) {
     let gui_state = GuiState::default();
-    for parent in parent_query.iter() {
-        info!("building game ui");
-        commands.entity(parent).with_children(|parent| {
+    build_gui(
+        &mut commands,
+        &mut materials,
+        &font_assets,
+        &button_material,
+        &document,
+        |materials, _, button_material, parent| {
             // root node
             parent
                 .spawn_bundle(NodeBundle {
@@ -224,7 +261,7 @@ fn ui(
 
                         ..Default::default()
                     },
-                    material: materials.add(Color::rgba(0.0, 1.0, 0.0, 1.0).into()),
+                    material: materials.add(Color::NONE.into()),
                     ..Default::default()
                 })
                 .insert(GameEntity)
@@ -574,8 +611,8 @@ fn ui(
                         .insert(GameEntity);
                 })
                 .insert(GameEntity);
-        });
-    }
+        },
+    );
     commands.spawn().insert(gui_state);
 }
 fn show_speed(

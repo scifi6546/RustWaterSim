@@ -21,7 +21,10 @@ use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPl
 use water::WaterPlugin;
 pub mod prelude {
     pub use super::game_menu::{ButtonMaterial, GameEntity, GuiState, GuiStyle, GUI_STYLE};
-    pub use super::markdown::{BuiltParentLabel, DocumentGuiParent, GuiParent};
+    pub use super::markdown::{
+        build_gui, despawn_gui, nav_system, BuiltParentLabel, Document, DocumentGuiParent,
+        GuiParent,
+    };
     pub use super::menu::SelectStartupInfo;
     pub use super::player::CameraLabel;
     pub use super::water::{
@@ -33,15 +36,14 @@ pub mod prelude {
 // See https://bevy-cheatbook.github.io/programming/states.html
 // Or https://github.com/bevyengine/bevy/blob/main/examples/ecs/state.rs
 #[derive(Clone, Eq, PartialEq, Debug, Hash)]
-enum GameState {
+pub enum GameState {
     // During the loading State the LoadingPlugin will load our assets
     Loading,
-    BuildGui,
     // During this State the actual game logic is executed
     Playing,
     // Here the menu is drawn and waiting for player interaction
     Menu,
-    Page { number: u32 },
+    Page,
 }
 
 pub struct GamePlugin;

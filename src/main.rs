@@ -12,7 +12,7 @@ fn main() {
     let mut app = App::build();
     app.insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
         .insert_resource(WindowDescriptor {
-            width: 800.,
+            width: 1400.,
             height: 800.,
             title: "Bevy game".to_string(), // ToDo
             ..Default::default()
