@@ -1,7 +1,6 @@
 use super::prelude::{ButtonMaterial, GUI_STYLE};
 use super::GameState;
 use crate::loading::FontAssets;
-use bevy::ecs::system::EntityCommands;
 use bevy::prelude::*;
 pub struct DocumentPlugin;
 mod page;
@@ -194,7 +193,7 @@ pub fn nav_system(
         match interaction {
             Interaction::Clicked => {
                 *mat = material.nav_bar_button_clicked.clone();
-                state.set(GameState::Menu);
+                state.set(GameState::Menu).expect("failed to set state");
             }
             Interaction::Hovered => {
                 *mat = material.nav_bar_button_hover.clone();

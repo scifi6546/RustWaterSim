@@ -4,7 +4,6 @@ pub use aabb::aabb_barrier_from_transform;
 use bevy::{prelude::*, render::mesh::Indices, render::pipeline::PrimitiveTopology};
 pub use water_sim::{AABBBarrier, FiniteSolver, SolveInfo};
 pub mod aabb;
-mod finite_solver;
 use aabb::AABBMaterial;
 //pub use finite_solver::FiniteSolver;
 mod uv_show;
@@ -115,56 +114,6 @@ fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
     mesh.set_indices(Some(Indices::U32(indicies)));
 }
 
-#[derive(Clone)]
-pub struct Grid<T: Clone + Copy> {
-    points: Vec<T>,
-    x: usize,
-    y: usize,
-}
-impl<T: Clone + Copy + Default> Grid<T> {
-    pub fn from_vec(dimensions: Vector2<usize>, points: Vec<T>) -> Self {
-        assert_eq!(dimensions.x * dimensions.y, points.len());
-        Self {
-            points,
-            x: dimensions.x,
-            y: dimensions.y,
-        }
-    }
-    /// X dimensions
-    pub fn x(&self) -> usize {
-        self.x
-    }
-    /// Y dimensions
-    pub fn y(&self) -> usize {
-        self.y
-    }
-    ///
-    pub fn get(&self, x: usize, y: usize) -> T {
-        self.points[self.y * x + y]
-    }
-    /// gets mut unchecked
-    pub fn get_mut(&mut self, x: usize, y: usize) -> &mut T {
-        &mut self.points[self.y * x + y]
-    }
-    /// gets points unchecked at point
-    pub fn get_unchecked(&self, dim: Vector2<i64>) -> T {
-        self.get(dim.x as usize, dim.y as usize)
-    }
-    /// gets unchecked mut
-    pub fn get_mut_unchecked(&mut self, dim: Vector2<i64>) -> &mut T {
-        self.get_mut(dim.x as usize, dim.y as usize)
-    }
-    /// builds grid from function
-    pub fn from_fn<F: Fn(usize, usize) -> T>(f: F, dimensions: Vector2<usize>) -> Self {
-        let mut s = Self::from_vec(dimensions, vec![T::default(); dimensions.x * dimensions.y]);
-        for x in 0..dimensions.x {
-            for y in 0..dimensions.y {
-                *s.get_mut(x, y) = f(x, y);
-            }
-        }
-        s
-    }
-}
 pub struct WaterMarker;
 
 fn spawn_water_system(
@@ -175,7 +124,7 @@ fn spawn_water_system(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let water_fn = CONDITIONS[startup_info.index].build_water_fn;
-    let (mut water, mut barriers) = water_fn();
+    let (water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.h().x() as f32;
 

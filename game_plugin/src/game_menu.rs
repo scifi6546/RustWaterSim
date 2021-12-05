@@ -1,6 +1,6 @@
 use crate::prelude::{
-    aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBBarrier, AABBMaterial,
-    Document, FiniteSolver, GuiParent, SolveInfo, WaterMarker, WATER_SIZE,
+    aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBMaterial, Document,
+    FiniteSolver, SolveInfo, WaterMarker, WATER_SIZE,
 };
 use crate::{loading::FontAssets, GameState};
 use bevy::prelude::*;
@@ -238,7 +238,6 @@ fn ui(
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_material: Res<ButtonMaterial>,
     font_assets: Res<FontAssets>,
-    parent_query: Query<Entity, With<GuiParent>>,
 ) {
     let gui_state = GuiState::default();
     build_gui(
@@ -715,7 +714,7 @@ fn leave_button(
         match interaction {
             Interaction::Clicked => {
                 *material = button_materials.pressed.clone();
-                state.set(GameState::Menu);
+                state.set(GameState::Menu).expect("failed to set state");
             }
             Interaction::Hovered => {
                 *material = button_materials.hovered.clone();

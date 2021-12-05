@@ -1,4 +1,8 @@
-use bevy::prelude::*;
+// rustc does not track importing macros as import
+#[allow(unused_imports)]
+use bevy::prelude::{info, warn};
+/// rustc catchis this as a warning
+#[allow(unused_variables)]
 pub fn save(data: &[u8]) {
     #[cfg(target_arch = "wasm32")]
     save_web(data);

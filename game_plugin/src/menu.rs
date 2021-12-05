@@ -1,7 +1,7 @@
 use crate::loading::FontAssets;
 use crate::prelude::{
-    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, GuiParent,
-    CONDITIONS, GUI_STYLE,
+    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, CONDITIONS,
+    GUI_STYLE,
 };
 use crate::GameState;
 use bevy::prelude::*;
@@ -43,7 +43,6 @@ fn setup_menu(
     document: Res<Document>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
-    mut parent_query: Query<Entity, With<GuiParent>>,
 ) {
     commands.spawn_bundle(UiCameraBundle::default());
     build_gui(
@@ -135,12 +134,5 @@ fn conditions_button(
                 *material = button_materials.normal.clone();
             }
         }
-    }
-}
-
-/// clears ui of all ui items
-fn clear_ui(mut commands: Commands, text_query: Query<Entity, With<MenuItem>>) {
-    for entity in text_query.iter() {
-        commands.entity(entity).despawn();
     }
 }

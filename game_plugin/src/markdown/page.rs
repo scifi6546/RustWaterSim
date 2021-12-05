@@ -1,5 +1,5 @@
 use super::{build_gui, FontAssets, RootNode};
-use crate::prelude::{ButtonMaterial, GUI_STYLE};
+use crate::prelude::ButtonMaterial;
 use pulldown_cmark::{Event, Parser, Tag};
 
 use crate::GameState;
@@ -92,7 +92,7 @@ pub fn button(
     document: Res<Document>,
     asset_server: Res<AssetServer>,
     mut page_state: ResMut<PageState>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
 
     mut state: ResMut<State<GameState>>,
@@ -123,7 +123,7 @@ pub fn button(
                     );
                     return;
                 } else {
-                    state.set(GameState::Page);
+                    state.set(GameState::Page).expect("failed to set state");
                 }
             }
             Interaction::Hovered => {
@@ -140,7 +140,7 @@ pub fn setup_page(
     font_assets: Res<FontAssets>,
     document: Res<Document>,
     asset_server: Res<AssetServer>,
-    mut page_state: ResMut<PageState>,
+    page_state: ResMut<PageState>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
 ) {

@@ -65,7 +65,6 @@ impl FiniteSolver {
     const DY: f32 = 999.0;
     const G: f32 = 9.81;
     const DT: f32 = 0.1;
-    const VISC: f32 = 0.9;
 
     /// gets mean height of water
     pub fn mean_height(&self) -> f32 {
@@ -79,17 +78,7 @@ impl FiniteSolver {
     }
     /// runs water simulation and outputs water heights
     pub fn solve(&mut self, boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
-        let mut max_delta = 0.0;
-
-        let delta = self.time_step(boxes);
-        max_delta = if delta > max_delta { delta } else { max_delta };
-
-        let mut volume = 0.0;
-        for x in 0..self.h.x() {
-            for y in 0..self.h.y() {
-                volume += self.h.get(x, y);
-            }
-        }
+        self.time_step(boxes);
 
         (
             &self.h,
@@ -374,11 +363,10 @@ impl FiniteSolver {
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 300));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 301));
         let h = Grid::from_fn(
-            |x, y| {
+            |_x, y| {
                 let top_height = 1.5;
                 let base_height = 1.0;
                 let top_cutoff = 10;
-                let slope = 0.5;
                 let slope_cutoff = 40;
                 let slope = (top_height - base_height) / (top_cutoff as f32 - slope_cutoff as f32);
                 if y < top_cutoff {

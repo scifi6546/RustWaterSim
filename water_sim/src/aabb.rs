@@ -1,4 +1,3 @@
-use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
 use nalgebra::Vector2;
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct AABBBarrier {

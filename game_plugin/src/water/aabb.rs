@@ -14,11 +14,6 @@ pub fn insert_aabb_material(
     info!("inserting aabb");
     commands.insert_resource(AABBMaterial { material });
 }
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub struct AABBBArrier {
-    pub top_right: Vector2<i32>,
-    pub bottom_left: Vector2<i32>,
-}
 pub fn aabb_barrier_from_transform(transform: Transform, water: &FiniteSolver) -> AABBBarrier {
     let water_x = water.h().x();
     let scaling = water_x as f32 / WATER_SIZE;
@@ -27,25 +22,6 @@ pub fn aabb_barrier_from_transform(transform: Transform, water: &FiniteSolver) -
     AABBBarrier {
         bottom_left: Vector2::new(lower.x as i32, lower.z as i32),
         top_right: Vector2::new(upper.x as i32, upper.z as i32),
-    }
-}
-
-impl AABBBArrier {
-    pub fn contains_point(&self, x: i32, y: i32) -> bool {
-        self.top_right.x >= x
-            && self.top_right.y >= y
-            && self.bottom_left.x <= x
-            && self.bottom_left.y <= y
-    }
-    pub fn from_transform(transform: Transform, water: &FiniteSolver) -> Self {
-        let water_x = water.h().x();
-        let scaling = water_x as f32 / WATER_SIZE;
-        let lower = scaling * (transform.translation - 0.5 * transform.scale);
-        let upper = scaling * (transform.translation + 0.5 * transform.scale);
-        Self {
-            bottom_left: Vector2::new(lower.x as i32, lower.z as i32),
-            top_right: Vector2::new(upper.x as i32, upper.z as i32),
-        }
     }
 }
 
@@ -101,7 +77,7 @@ pub fn build_barrier(
 }
 pub fn aabb_transform(
     water_query: Query<&FiniteSolver, With<FiniteSolver>>,
-    mut box_query: Query<(&mut AABBBArrier, &Transform), Changed<Transform>>,
+    mut box_query: Query<(&mut AABBBarrier, &Transform), Changed<Transform>>,
 ) {
     let water = if let Some(water) = water_query.iter().next() {
         water

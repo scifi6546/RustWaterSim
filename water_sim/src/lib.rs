@@ -5,9 +5,8 @@ pub use finite_solver::FiniteSolver;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
 pub const WATER_SIZE: f32 = 6.0;
-const HEIGHT_MULTIPLIER: f32 = 30.0;
 
-use nalgebra::{Vector2, Vector3};
+use nalgebra::Vector2;
 
 pub struct SolveInfo {
     pub name: &'static str,
