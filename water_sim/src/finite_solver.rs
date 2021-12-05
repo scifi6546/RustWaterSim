@@ -1,13 +1,10 @@
-use super::{Grid, SolveInfo};
-use bevy::{prelude::*, render::pipeline::PrimitiveTopology};
-use nalgebra::Vector2;
-use std::f32::consts::PI;
-use water_sim::AABBBarrier;
 /// based off of https://github.com/jostbr/shallow-water/blob/master/swe.py
 /// Current Wierdness:
 ///  - When having circle there is interference that breaks the model  
 ///     propagating backwards from wave front
-use water_sim::FiniteSolver;
+use super::{AABBBarrier, Grid, SolveInfo};
+use nalgebra::Vector2;
+use std::f32::consts::PI;
 /// Axis aligned bounding box
 
 fn vec_contains_point(boxes: &[AABBBarrier], x: i32, y: i32) -> bool {
@@ -50,7 +47,7 @@ impl Source {
     }
 }
 
-pub struct dep_FiniteSolver {
+pub struct FiniteSolver {
     /// Water height
     h: Grid<f32>,
     ///u velocity
@@ -63,8 +60,7 @@ pub struct dep_FiniteSolver {
     sources: Vec<Source>,
 }
 
-/*
-impl dep_FiniteSolver {
+impl FiniteSolver {
     const DX: f32 = 999.0;
     const DY: f32 = 999.0;
     const G: f32 = 9.81;
@@ -82,7 +78,7 @@ impl dep_FiniteSolver {
         return sum;
     }
     /// runs water simulation and outputs water heights
-    pub fn solve(&mut self, boxes: &[AABBBArrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
+    pub fn solve(&mut self, boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         let mut max_delta = 0.0;
 
         let delta = self.time_step(boxes);
@@ -122,18 +118,8 @@ impl dep_FiniteSolver {
     pub fn u(&self) -> &Grid<f32> {
         &self.u
     }
-    /// Builds mesh from grid, todo: make water sim in place for performance reasons
-    pub fn build_mesh(&mut self, barriers: &[AABBBArrier]) -> Mesh {
-        todo!()
-        /*
-        let (water, _solve_info) = self.solve(barriers);
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        super::build_mesh(water, &mut mesh);
-        return mesh;
-            */
-    }
     /// Returns max displacement in timestep
-    pub fn time_step(&mut self, barriers: &[AABBBArrier]) -> f32 {
+    pub fn time_step(&mut self, barriers: &[AABBBarrier]) -> f32 {
         for source in self.sources.iter() {
             source.change_h(&mut self.h, self.t);
         }
@@ -155,13 +141,12 @@ impl dep_FiniteSolver {
         self.t += 1;
         Self::update_heights(&half_h, &mut self.h, &self.u, &self.v, Self::DT, barriers)
     }
-    /*
     fn update_velocity(
         heights: &Grid<f32>,
         u: &mut Grid<f32>,
         v: &mut Grid<f32>,
         delta_t: f32,
-        boxes: &[AABBBArrier],
+        boxes: &[AABBBarrier],
     ) {
         for x in 0..heights.x() + 1 {
             for y in 0..heights.y() + 1 {
@@ -203,7 +188,7 @@ impl dep_FiniteSolver {
         u: &Grid<f32>,
         v: &Grid<f32>,
         delta_t: f32,
-        boxes: &[AABBBArrier],
+        boxes: &[AABBBarrier],
     ) -> f32 {
         let mut max_delta = 0.0;
         for x in 0..h.x() {
@@ -254,15 +239,12 @@ impl dep_FiniteSolver {
         }
         max_delta
     }
-        */
     pub fn numpy_data(&self) -> Vec<u8> {
-        error!("to implement numpy");
         let header_str = format!(
             "{{'descr': '<f4', 'fortran_order': False, 'shape': ({}, {}), }}",
             self.h.x(),
             self.h.y()
         );
-        debug!("numpy header: {}", header_str);
         let header_bytes = header_str.as_bytes();
         let header_len = header_bytes.len() as u16;
         let mut out_data = vec![
@@ -285,7 +267,7 @@ impl dep_FiniteSolver {
 
         return out_data;
     }
-    pub fn droplet() -> (Self, Vec<AABBBArrier>) {
+    pub fn droplet() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
@@ -310,7 +292,7 @@ impl dep_FiniteSolver {
             vec![],
         )
     }
-    pub fn dynamic_droplet() -> (Self, Vec<AABBBArrier>) {
+    pub fn dynamic_droplet() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(|_, _| 2.0, Vector2::new(300, 300));
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(301, 300));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(300, 301));
@@ -338,7 +320,7 @@ impl dep_FiniteSolver {
             vec![],
         )
     }
-    pub fn single_dynamic() -> (Self, Vec<AABBBArrier>) {
+    pub fn single_dynamic() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(|_, _| 2.0, Vector2::new(200, 200));
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(201, 200));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(200, 201));
@@ -358,7 +340,7 @@ impl dep_FiniteSolver {
             vec![],
         )
     }
-    pub fn big_droplet() -> (Self, Vec<AABBBArrier>) {
+    pub fn big_droplet() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(
             |x, y| {
                 let floor = 5.0;
@@ -388,7 +370,7 @@ impl dep_FiniteSolver {
             vec![],
         )
     }
-    pub fn bridge_poles() -> (Self, Vec<AABBBArrier>) {
+    pub fn bridge_poles() -> (Self, Vec<AABBBarrier>) {
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 300));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 301));
         let h = Grid::from_fn(
@@ -418,26 +400,26 @@ impl dep_FiniteSolver {
                 t: 0,
             },
             vec![
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(20, 50),
                     bottom_left: Vector2::new(15, 45),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(45, 50),
                     bottom_left: Vector2::new(40, 45),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(70, 50),
                     bottom_left: Vector2::new(65, 45),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(95, 50),
                     bottom_left: Vector2::new(90, 45),
                 },
             ],
         )
     }
-    pub fn barrier() -> (Self, Vec<AABBBArrier>) {
+    pub fn barrier() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
@@ -460,22 +442,22 @@ impl dep_FiniteSolver {
                 t: 0,
             },
             vec![
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(30, 110),
                     bottom_left: Vector2::new(-10, 109),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(65, 110),
                     bottom_left: Vector2::new(35, 109),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(110, 110),
                     bottom_left: Vector2::new(70, 109),
                 },
             ],
         )
     }
-    pub fn barrier_long() -> (Self, Vec<AABBBArrier>) {
+    pub fn barrier_long() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
@@ -498,15 +480,15 @@ impl dep_FiniteSolver {
                 t: 0,
             },
             vec![
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(30, 110),
                     bottom_left: Vector2::new(-10, 109),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(65, 110),
                     bottom_left: Vector2::new(35, 109),
                 },
-                AABBBArrier {
+                AABBBarrier {
                     top_right: Vector2::new(110, 110),
                     bottom_left: Vector2::new(70, 109),
                 },
@@ -514,4 +496,3 @@ impl dep_FiniteSolver {
         )
     }
 }
-*/

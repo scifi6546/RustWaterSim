@@ -1479,6 +1479,7 @@ dependencies = [
  "pulldown-cmark",
  "rfd",
  "smooth-bevy-cameras",
+ "water_sim",
 ]
 
 [[package]]
@@ -3492,6 +3493,13 @@ name = "wasm-bindgen-shared"
 version = "0.2.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7e7811dd7f9398f14cc76efd356f98f03aa30419dea46aa810d71e819fc97158"
+
+[[package]]
+name = "water_sim"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
+]
 
 [[package]]
 name = "wayland-client"

@@ -2,6 +2,7 @@ use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
 use crate::prelude::GameEntity;
 use bevy::prelude::*;
 use nalgebra::Vector2;
+use water_sim::AABBBarrier;
 pub struct AABBMaterial {
     pub material: Handle<StandardMaterial>,
 }
@@ -18,6 +19,17 @@ pub struct AABBBArrier {
     pub top_right: Vector2<i32>,
     pub bottom_left: Vector2<i32>,
 }
+pub fn aabb_barrier_from_transform(transform: Transform, water: &FiniteSolver) -> AABBBarrier {
+    let water_x = water.h().x();
+    let scaling = water_x as f32 / WATER_SIZE;
+    let lower = scaling * (transform.translation - 0.5 * transform.scale);
+    let upper = scaling * (transform.translation + 0.5 * transform.scale);
+    AABBBarrier {
+        bottom_left: Vector2::new(lower.x as i32, lower.z as i32),
+        top_right: Vector2::new(upper.x as i32, upper.z as i32),
+    }
+}
+
 impl AABBBArrier {
     pub fn contains_point(&self, x: i32, y: i32) -> bool {
         self.top_right.x >= x
@@ -38,7 +50,7 @@ impl AABBBArrier {
 }
 
 fn build_cube_from_aabb(
-    aabb: &AABBBArrier,
+    aabb: &water_sim::AABBBarrier,
     material: Handle<StandardMaterial>,
     meshes: &mut ResMut<Assets<Mesh>>,
     y: f32,
@@ -68,7 +80,7 @@ fn build_cube_from_aabb(
 }
 pub fn build_barrier(
     commands: &mut Commands,
-    aabb: AABBBArrier,
+    aabb: water_sim::AABBBarrier,
     material: &AABBMaterial,
     meshes: &mut ResMut<Assets<Mesh>>,
     mean_h: f32,

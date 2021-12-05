@@ -1,6 +1,6 @@
 use crate::prelude::{
-    build_barrier, build_gui, despawn_gui, AABBBArrier, AABBMaterial, Document, FiniteSolver,
-    GuiParent, SolveInfo, WaterMarker, WATER_SIZE,
+    aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBBarrier, AABBMaterial,
+    Document, FiniteSolver, GuiParent, SolveInfo, WaterMarker, WATER_SIZE,
 };
 use crate::{loading::FontAssets, GameState};
 use bevy::prelude::*;
@@ -900,7 +900,7 @@ fn add_box_button(
                 aabb_transform.translation.y = WATER_SIZE / 2.0;
                 build_barrier(
                     &mut commands,
-                    AABBBArrier::from_transform(aabb_transform, water),
+                    aabb_barrier_from_transform(aabb_transform, water),
                     &aabb_material,
                     &mut meshes,
                     mean_h,

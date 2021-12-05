@@ -1,10 +1,12 @@
 use crate::prelude::{CameraLabel, GameEntity, GuiState, SelectStartupInfo};
 use crate::GameState;
-use bevy::{prelude::*, render::mesh::Indices};
+pub use aabb::aabb_barrier_from_transform;
+use bevy::{prelude::*, render::mesh::Indices, render::pipeline::PrimitiveTopology};
+pub use water_sim::{AABBBarrier, FiniteSolver, SolveInfo};
 pub mod aabb;
 mod finite_solver;
-use aabb::{AABBBArrier, AABBMaterial};
-pub use finite_solver::FiniteSolver;
+use aabb::AABBMaterial;
+//pub use finite_solver::FiniteSolver;
 mod uv_show;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
@@ -46,11 +48,7 @@ impl Plugin for WaterPlugin {
     }
 }
 
-pub struct SolveInfo {
-    pub name: &'static str,
-    pub data: String,
-}
-fn build_mesh(water: &Grid<f32>, mesh: &mut Mesh) {
+fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
     let mut position = vec![];
     let mut normals = vec![];
     let mut uvs = vec![];
@@ -185,11 +183,14 @@ fn spawn_water_system(
     let info: Vec<SolveInfo> = vec![];
     let mean_h = water.mean_height();
     let water_dimensions = Vector2::new(water.h().x(), water.h().y());
+
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    build_mesh(water.h(), &mut mesh);
     commands
         .spawn_bundle(PbrBundle {
             material: materials.add(Color::rgb(0.25, 0.25, 0.7).into()),
             transform: transform,
-            mesh: meshes.add(water.build_mesh(&barriers)),
+            mesh: meshes.add(mesh),
             ..Default::default()
         })
         .insert(water)
@@ -209,36 +210,36 @@ fn spawn_water_system(
 }
 pub struct InitialConditions {
     pub name: &'static str,
-    pub build_water_fn: fn() -> (FiniteSolver, Vec<AABBBArrier>),
+    pub build_water_fn: fn() -> (FiniteSolver, Vec<AABBBarrier>),
 }
 pub const CONDITIONS: &[InitialConditions] = &[
     InitialConditions {
         name: "Double Slit",
-        build_water_fn: || finite_solver::FiniteSolver::barrier(),
+        build_water_fn: || FiniteSolver::barrier(),
     },
     InitialConditions {
         name: "Double Slit Large",
-        build_water_fn: || finite_solver::FiniteSolver::barrier_long(),
+        build_water_fn: || FiniteSolver::barrier_long(),
     },
     InitialConditions {
         name: "Droplet",
-        build_water_fn: || finite_solver::FiniteSolver::droplet(),
+        build_water_fn: || FiniteSolver::droplet(),
     },
     InitialConditions {
         name: "Single Source",
-        build_water_fn: || finite_solver::FiniteSolver::single_dynamic(),
+        build_water_fn: || FiniteSolver::single_dynamic(),
     },
     InitialConditions {
         name: "Two Sources",
-        build_water_fn: || finite_solver::FiniteSolver::dynamic_droplet(),
+        build_water_fn: || FiniteSolver::dynamic_droplet(),
     },
     InitialConditions {
         name: "Big Droplet (warning slow)",
-        build_water_fn: || finite_solver::FiniteSolver::big_droplet(),
+        build_water_fn: || FiniteSolver::big_droplet(),
     },
     InitialConditions {
         name: "Wall",
-        build_water_fn: || finite_solver::FiniteSolver::bridge_poles(),
+        build_water_fn: || FiniteSolver::bridge_poles(),
     },
 ];
 fn water_simulation(
@@ -254,7 +255,7 @@ fn water_simulation(
         ),
         With<WaterMarker>,
     >,
-    aabb_query: Query<&AABBBArrier, ()>,
+    aabb_query: Query<&AABBBarrier, ()>,
 ) {
     let gui_state = gui_query.iter().next();
     if gui_state.is_none() {

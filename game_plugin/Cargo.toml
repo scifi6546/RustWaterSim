@@ -30,3 +30,4 @@ rfd = "0.6.1"
 nalgebra = "0.29.0"
 pulldown-cmark = "0.8.0"
 bevy-inspector-egui = {version = "0.6.1",optional=true}
+water_sim = {path = "../water_sim"}
