@@ -123,7 +123,7 @@ fn spawn_water_system(
     startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let water_fn = CONDITIONS[startup_info.index].build_water_fn;
+    let water_fn = water_sim::CONDITIONS[startup_info.index].build_water_fn;
     let (water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.h().x() as f32;
@@ -134,7 +134,7 @@ fn spawn_water_system(
     let water_dimensions = Vector2::new(water.h().x(), water.h().y());
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    build_mesh(water.h(), &mut mesh);
+    build_mesh(&water.offset_h(), &mut mesh);
     commands
         .spawn_bundle(PbrBundle {
             material: materials.add(Color::rgb(0.25, 0.25, 0.7).into()),
@@ -161,36 +161,6 @@ pub struct InitialConditions {
     pub name: &'static str,
     pub build_water_fn: fn() -> (FiniteSolver, Vec<AABBBarrier>),
 }
-pub const CONDITIONS: &[InitialConditions] = &[
-    InitialConditions {
-        name: "Double Slit",
-        build_water_fn: || FiniteSolver::barrier(),
-    },
-    InitialConditions {
-        name: "Double Slit Large",
-        build_water_fn: || FiniteSolver::barrier_long(),
-    },
-    InitialConditions {
-        name: "Droplet",
-        build_water_fn: || FiniteSolver::droplet(),
-    },
-    InitialConditions {
-        name: "Single Source",
-        build_water_fn: || FiniteSolver::single_dynamic(),
-    },
-    InitialConditions {
-        name: "Two Sources",
-        build_water_fn: || FiniteSolver::dynamic_droplet(),
-    },
-    InitialConditions {
-        name: "Big Droplet (warning slow)",
-        build_water_fn: || FiniteSolver::big_droplet(),
-    },
-    InitialConditions {
-        name: "Wall",
-        build_water_fn: || FiniteSolver::bridge_poles(),
-    },
-];
 fn water_simulation(
     _commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
@@ -219,10 +189,11 @@ fn water_simulation(
         (0..(gui_state.water_speed - 1)).for_each(|_| {
             water.solve(&aabb_vec);
         });
-        let (heights, out_info) = water.solve(&aabb_vec);
+        let (_, out_info) = water.solve(&aabb_vec);
+        let heights = water.offset_h();
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
-        build_mesh(heights, &mut mesh);
+        build_mesh(&heights, &mut mesh);
         *info = out_info;
     }
 }

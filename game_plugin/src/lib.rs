@@ -29,9 +29,9 @@ pub mod prelude {
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
-        AABBBarrier, FiniteSolver, InitialConditions, SolveInfo, WaterMarker, CONDITIONS,
-        WATER_SIZE,
+        AABBBarrier, FiniteSolver, InitialConditions, SolveInfo, WaterMarker, WATER_SIZE,
     };
+    pub use water_sim::CONDITIONS;
 }
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html

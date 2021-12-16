@@ -1,4 +1,5 @@
 pub mod aabb;
+mod aabb_tree;
 mod finite_solver;
 pub use aabb::AABBBarrier;
 pub use finite_solver::FiniteSolver;
@@ -63,6 +64,21 @@ impl<T: Clone + Copy + Default> Grid<T> {
         s
     }
 }
+impl<T: std::ops::Add + std::ops::AddAssign + Clone + Copy> std::ops::Add for Grid<T> {
+    type Output = Self;
+    fn add(mut self, other: Self) -> Self {
+        assert_eq!(self.x, other.x);
+        assert_eq!(self.y, other.y);
+        for i in 0..self.points.len() {
+            self.points[i] += other.points[i];
+        }
+        Self {
+            points: self.points,
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
 pub struct WaterMarker;
 
 pub struct InitialConditions {
@@ -83,6 +99,10 @@ pub const CONDITIONS: &[InitialConditions] = &[
         build_water_fn: || finite_solver::FiniteSolver::droplet(),
     },
     InitialConditions {
+        name: "Lake",
+        build_water_fn: || finite_solver::FiniteSolver::cup(),
+    },
+    InitialConditions {
         name: "Single Source",
         build_water_fn: || finite_solver::FiniteSolver::single_dynamic(),
     },
@@ -99,11 +119,3 @@ pub const CONDITIONS: &[InitialConditions] = &[
         build_water_fn: || finite_solver::FiniteSolver::bridge_poles(),
     },
 ];
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
-}
