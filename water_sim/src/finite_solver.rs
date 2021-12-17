@@ -164,43 +164,39 @@ impl FiniteSolver {
     ) {
         for x in 0..heights.x() + 1 {
             for y in 0..heights.y() + 1 {
-                if x != 0 && y != 0 {
-                    //handling u
-                    if y < heights.y() {
-                        if x == 0
-                            || x == heights.x()
-                            || vec_contains_point(&boxes, x as i32, y as i32)
-                            || vec_contains_point(&boxes, x as i32 - 1, y as i32)
-                        {
-                            *u.get_mut(x, y) = 0.0;
-                        } else {
-                            let hxn1 = heights.get(x - 1, y);
-                            let hxp1 = heights.get(x, y);
-                            let gh_xn1 = ground_heights.get(x - 1, y);
-                            let gh_xp1 = ground_heights.get(x, y);
+                //handling u
+                if y < heights.y() {
+                    if x == 0
+                        || x == heights.x()
+                        || vec_contains_point(&boxes, x as i32, y as i32)
+                        || vec_contains_point(&boxes, x as i32 - 1, y as i32)
+                    {
+                        *u.get_mut(x, y) = 0.0;
+                    } else {
+                        let hxn1 = heights.get(x - 1, y);
+                        let hxp1 = heights.get(x, y);
+                        let gh_xn1 = ground_heights.get(x - 1, y);
+                        let gh_xp1 = ground_heights.get(x, y);
 
-                            *u.get_mut(x, y) += Self::G
-                                * (delta_t / Self::DX)
-                                * ((hxp1 + gh_xp1) - (hxn1 + gh_xn1));
-                        }
+                        *u.get_mut(x, y) +=
+                            Self::G * (delta_t / Self::DX) * ((hxp1 + gh_xp1) - (hxn1 + gh_xn1));
                     }
-                    if x < heights.x() {
-                        if y == 0
-                            || y == heights.y()
-                            || vec_contains_point(&boxes, x as i32, y as i32)
-                            || vec_contains_point(&boxes, x as i32, y as i32 - 1)
-                        {
-                            *v.get_mut(x, y) = 0.0;
-                        } else {
-                            let hyn1 = heights.get(x, y - 1);
-                            let hyp1 = heights.get(x, y);
+                }
+                if x < heights.x() {
+                    if y == 0
+                        || y == heights.y()
+                        || vec_contains_point(&boxes, x as i32, y as i32)
+                        || vec_contains_point(&boxes, x as i32, y as i32 - 1)
+                    {
+                        *v.get_mut(x, y) = 0.0;
+                    } else {
+                        let hyn1 = heights.get(x, y - 1);
+                        let hyp1 = heights.get(x, y);
 
-                            let gh_yn1 = ground_heights.get(x, y - 1);
-                            let gh_yp1 = ground_heights.get(x, y);
-                            *v.get_mut(x, y) += Self::G
-                                * (delta_t / Self::DY)
-                                * ((hyp1 + gh_yp1) - (hyn1 + gh_yn1));
-                        }
+                        let gh_yn1 = ground_heights.get(x, y - 1);
+                        let gh_yp1 = ground_heights.get(x, y);
+                        *v.get_mut(x, y) +=
+                            Self::G * (delta_t / Self::DY) * ((hyp1 + gh_yp1) - (hyn1 + gh_yn1));
                     }
                 }
             }
@@ -238,24 +234,24 @@ impl FiniteSolver {
                 let h0 = h.get(x, y);
                 let mut dx = 0.0;
                 //lower x boundry
-                // if x >= 1 || !vec_contains_point(&boxes, x as i32 - 1, y as i32) {
-                dx += un1 * (hxn1 + h0) / 2.0;
-                // }
+                if x >= 1 || !vec_contains_point(&boxes, x as i32 - 1, y as i32) {
+                    dx += un1 * (hxn1 + h0) / 2.0;
+                }
                 // upper x boundry
-                // if x <= h.x() - 2 || !vec_contains_point(&boxes, x as i32 + 1, y as i32) {
-                dx -= up1 * (hxp1 + h0) / 2.0;
-                // }
+                if x <= h.x() - 2 || !vec_contains_point(&boxes, x as i32 + 1, y as i32) {
+                    dx -= up1 * (hxp1 + h0) / 2.0;
+                }
 
                 //let dx = un1 * (hxn1 + h0) / 2.0 - up1 * (hxp1 + h0) / 2.0;
                 let mut dy = 0.0;
                 //lower y boundry
-                // if y >= 1 || !vec_contains_point(&boxes, x as i32, y as i32 - 1) {
-                dy += vn1 * (hyn1 + h0) / 2.0;
-                // }
+                if y >= 1 || !vec_contains_point(&boxes, x as i32, y as i32 - 1) {
+                    dy += vn1 * (hyn1 + h0) / 2.0;
+                }
                 // upper y boundry
-                //if y <= h.y() - 2 || !vec_contains_point(&boxes, x as i32, y as i32 + 1) {
-                dy -= vp1 * (hyp1 + h0) / 2.0;
-                // }
+                if y <= h.y() - 2 || !vec_contains_point(&boxes, x as i32, y as i32 + 1) {
+                    dy -= vp1 * (hyp1 + h0) / 2.0;
+                }
                 let delta = delta_t * (dx + dy);
                 max_delta = if delta > max_delta { delta } else { max_delta };
                 *h_apply.get_mut(x, y) -= delta;
@@ -322,7 +318,7 @@ impl FiniteSolver {
         let g_h = Grid::from_fn(
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
-                r / 200.0
+                r / 100.0
             },
             Vector2::new(100, 100),
         );
