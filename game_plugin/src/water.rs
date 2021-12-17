@@ -115,7 +115,7 @@ fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
 }
 
 pub struct WaterMarker;
-
+pub struct GroundMarker;
 fn spawn_water_system(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -134,6 +134,8 @@ fn spawn_water_system(
     let water_dimensions = Vector2::new(water.h().x(), water.h().y());
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    let mut ground_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    build_mesh(&water.g_h(), &mut ground_mesh);
     build_mesh(&water.offset_h(), &mut mesh);
     commands
         .spawn_bundle(PbrBundle {
@@ -146,6 +148,16 @@ fn spawn_water_system(
         .insert(info)
         .insert(GameEntity)
         .insert(WaterMarker);
+    commands
+        .spawn_bundle(PbrBundle {
+            material: materials.add(Color::rgb(0.8, 0.25, 0.7).into()),
+            transform: transform,
+            mesh: meshes.add(ground_mesh),
+            ..Default::default()
+        })
+        .insert(GameEntity)
+        .insert(GroundMarker);
+
     for barrier in barriers.drain(..) {
         aabb::build_barrier(
             &mut commands,
