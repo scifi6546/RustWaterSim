@@ -337,6 +337,29 @@ impl FiniteSolver {
             vec![],
         )
     }
+    pub fn lake() -> (Self, Vec<AABBBarrier>) {
+        let g_h = Grid::from_fn(
+            |x, y| {
+                let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
+                r / 100.0
+            },
+            Vector2::new(100, 100),
+        );
+        let h = Grid::from_fn(|_, _| 1.0, Vector2::new(100, 100));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
+        (
+            Self {
+                h,
+                g_h,
+                u,
+                v,
+                sources: vec![],
+                t: 0,
+            },
+            vec![],
+        )
+    }
     pub fn dynamic_droplet() -> (Self, Vec<AABBBarrier>) {
         let h = Grid::from_fn(|_, _| 2.0, Vector2::new(300, 300));
         let g_h = Grid::from_fn(|_x, _y| 0.0, Vector2::new(300, 300));
