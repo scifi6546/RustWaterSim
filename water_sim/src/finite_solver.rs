@@ -317,14 +317,14 @@ impl FiniteSolver {
     pub fn cup() -> (Self, Vec<AABBBarrier>) {
         let g_h = Grid::from_fn(
             |x, y| {
-                let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
+                let r = ((x as f32 - 200.0).powi(2) + (y as f32 - 200.0).powi(2)).sqrt();
                 r / 100.0
             },
-            Vector2::new(100, 100),
+            Vector2::new(400, 400),
         );
-        let h = Grid::from_fn(|_, _| 1.0, Vector2::new(100, 100));
-        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
-        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
+        let h = Grid::from_fn(|_, _| 1.0, Vector2::new(400, 400));
+        let u = Grid::from_fn(|_, _| 0.0, Vector2::new(401, 400));
+        let v = Grid::from_fn(|_, _| 0.0, Vector2::new(400, 401));
         (
             Self {
                 h,
