@@ -103,6 +103,10 @@ pub const CONDITIONS: &[InitialConditions] = &[
         build_water_fn: || finite_solver::FiniteSolver::cup(),
     },
     InitialConditions {
+        name: "Formed Lake",
+        build_water_fn: || finite_solver::FiniteSolver::lake(),
+    },
+    InitialConditions {
         name: "Single Source",
         build_water_fn: || finite_solver::FiniteSolver::single_dynamic(),
     },

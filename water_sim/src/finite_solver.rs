@@ -322,7 +322,7 @@ impl FiniteSolver {
             },
             Vector2::new(400, 400),
         );
-        let h = Grid::from_fn(|_, _| 1.0, Vector2::new(400, 400));
+        let h = Grid::from_fn(|_, _| 2.0, Vector2::new(400, 400));
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(401, 400));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(400, 401));
         (
@@ -338,14 +338,25 @@ impl FiniteSolver {
         )
     }
     pub fn lake() -> (Self, Vec<AABBBarrier>) {
+        let water_height = 0.5;
         let g_h = Grid::from_fn(
             |x, y| {
                 let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
-                r / 100.0
+                r / 20.0
             },
             Vector2::new(100, 100),
         );
-        let h = Grid::from_fn(|_, _| 1.0, Vector2::new(100, 100));
+        let h = Grid::from_fn(
+            |x, y| {
+                let h = water_height - g_h.get(x, y);
+                if h > 0.0 {
+                    h
+                } else {
+                    0.0
+                }
+            },
+            Vector2::new(100, 100),
+        );
         let u = Grid::from_fn(|_, _| 0.0, Vector2::new(101, 100));
         let v = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 101));
         (
