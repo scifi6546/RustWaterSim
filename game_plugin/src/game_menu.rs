@@ -1,11 +1,13 @@
+use crate::game_menu::GuiLabel::GuiCreate;
 use crate::prelude::{
     aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBMaterial, Document,
-    FiniteSolver, SolveInfo, WaterMarker, WATER_SIZE,
+    FiniteSolver, SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
 };
 use crate::{loading::FontAssets, GameState};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::cmp::max;
+
 pub struct GuiStyle {
     pub button_normal_color: Color,
     pub button_hover_color: Color,
@@ -108,7 +110,7 @@ pub const GUI_STYLE: GuiStyle = GuiStyle {
         alpha: 1.0,
     },
 };
-
+#[derive(Component)]
 struct GameMenu;
 pub struct GameMenuPlugin;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
@@ -116,43 +118,41 @@ enum GuiLabel {
     GuiCreate,
 }
 impl Plugin for GameMenuPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.init_resource::<ButtonMaterial>();
         app.init_resource::<GuiState>();
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
-                .with_system(ui.system())
+                .with_system(ui)
                 .label(GuiLabel::GuiCreate),
         );
-        app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(run_ui.system()));
+        app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(run_ui));
 
         app.add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(show_velocity_button.system()),
+            SystemSet::on_update(GameState::Playing).with_system(show_velocity_button),
         )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(play_button.system()))
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(pause_button.system()),
-        );
-        app.add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(solve_info.system()),
-        )
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing)
-                .with_system(show_speed.system())
-                .with_system(solve_info.system())
-                .with_system(leave_button.system())
-                .with_system(save_water.system())
-                .with_system(add_box_button.system()),
-        )
-        .add_system_set(
-            SystemSet::on_exit(GameState::Playing)
-                .with_system(despawn_gui.system())
-                .with_system(cleanup_ui.system()),
-        );
+        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(play_button))
+        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(pause_button));
+        app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(solve_info))
+            .add_system_set(
+                SystemSet::on_update(GameState::Playing)
+                    .with_system(show_speed)
+                    .with_system(solve_info)
+                    .with_system(leave_button)
+                    .with_system(save_water)
+                    .with_system(add_box_button),
+            )
+            .add_system_set(
+                SystemSet::on_exit(GameState::Playing)
+                    .with_system(despawn_gui)
+                    .with_system(cleanup_ui),
+            );
     }
 }
 /// Marks viscocoty change text button
+#[derive(Component)]
 struct ViscocityChange;
+#[derive(Component)]
 struct SolveInfoLabel;
 
 pub struct ButtonMaterial {
@@ -196,7 +196,7 @@ enum SpeedDirection {
     Increasing,
     Decreasing,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Component, PartialEq, Eq)]
 pub struct GuiState {
     pub show_velocities: bool,
     pub show_water: bool,
@@ -216,20 +216,32 @@ impl Default for GuiState {
 }
 const MAX_WATER_SPEED: u32 = 64;
 /// Marker for play button
+#[derive(Component)]
 struct PlayButton;
+#[derive(Component)]
 struct PauseButton;
+#[derive(Component)]
 struct PauseTexture;
+#[derive(Component)]
 struct PlayTexture;
+#[derive(Component)]
 struct ShowSpeed;
+#[derive(Component)]
 struct AddBoxButton;
 /// Marks Show Velocities button
+#[derive(Component)]
 struct ShowVelocities;
 /// Marks show water
+#[derive(Component)]
 struct ShowWater;
+#[derive(Component)]
 struct LeaveButton;
+#[derive(Component)]
 struct LeaveText;
+#[derive(Component)]
 struct SaveWaterButton;
 /// marks that belongs to game::playing state. will be destroyed at end of this state
+#[derive(Component)]
 pub struct GameEntity;
 fn ui(
     mut commands: Commands,
@@ -260,7 +272,12 @@ fn ui(
 
                         ..Default::default()
                     },
-                    material: materials.add(Color::NONE.into()),
+                    color: UiColor(Color::Rgba {
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 0.0,
+                    }),
                     ..Default::default()
                 })
                 .insert(GameEntity)
@@ -269,7 +286,7 @@ fn ui(
                         .spawn_bundle(NodeBundle {
                             style: Style {
                                 // size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
-                                border: Rect::all(Val::Px(3.0)),
+                                border: UiRect::all(Val::Px(3.0)),
                                 flex_grow: 2.0,
                                 justify_content: JustifyContent::FlexStart,
                                 flex_direction: FlexDirection::ColumnReverse,
@@ -278,7 +295,7 @@ fn ui(
                                 size: Size::new(Val::Auto, Val::Percent(100.0)),
                                 ..Default::default()
                             },
-                            material: button_material.side_panel.clone(),
+                            color: UiColor(GUI_STYLE.side_panel_color),
                             ..Default::default()
                         })
                         .insert(GameEntity)
@@ -287,17 +304,16 @@ fn ui(
                                 .spawn_bundle(TextBundle {
                                     style: Style {
                                         align_self: AlignSelf::Center,
-                                        margin: Rect::all(Val::Px(5.0)),
+                                        margin: UiRect::all(Val::Px(5.0)),
                                         ..Default::default()
                                     },
-                                    text: Text::with_section(
+                                    text: Text::from_section(
                                         "",
                                         TextStyle {
                                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                                             font_size: 30.0,
                                             color: GUI_STYLE.text_color,
                                         },
-                                        Default::default(),
                                     ),
                                     ..Default::default()
                                 })
@@ -306,12 +322,12 @@ fn ui(
                             parent
                                 .spawn_bundle(ButtonBundle {
                                     style: Style {
-                                        margin: Rect::all(Val::Px(5.0)),
+                                        margin: UiRect::all(Val::Px(5.0)),
                                         justify_content: JustifyContent::Center,
                                         align_items: AlignItems::Center,
                                         ..Default::default()
                                     },
-                                    material: button_material.normal.clone(),
+                                    color: UiColor(GUI_STYLE.button_normal_color),
                                     ..Default::default()
                                 })
                                 .insert(GameEntity)
@@ -321,10 +337,10 @@ fn ui(
                                         .spawn_bundle(TextBundle {
                                             style: Style {
                                                 align_self: AlignSelf::Center,
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 ..Default::default()
                                             },
-                                            text: Text::with_section(
+                                            text: Text::from_section(
                                                 "Show Velocities",
                                                 TextStyle {
                                                     font: asset_server
@@ -332,7 +348,6 @@ fn ui(
                                                     font_size: 30.0,
                                                     color: GUI_STYLE.button_text_color.clone(),
                                                 },
-                                                Default::default(),
                                             ),
                                             ..Default::default()
                                         })
@@ -342,15 +357,15 @@ fn ui(
                             parent
                                 .spawn_bundle(ButtonBundle {
                                     style: Style {
-                                        margin: Rect::all(Val::Px(5.0)),
+                                        margin: UiRect::all(Val::Px(5.0)),
                                         justify_content: JustifyContent::Center,
                                         align_items: AlignItems::Center,
                                         ..Default::default()
                                     },
-                                    material: match gui_state.show_water {
-                                        true => button_material.pressed.clone(),
-                                        false => button_material.normal.clone(),
-                                    },
+                                    color: UiColor(match gui_state.show_water {
+                                        true => GUI_STYLE.button_pressed_color,
+                                        false => GUI_STYLE.button_normal_color,
+                                    }),
                                     ..Default::default()
                                 })
                                 .insert(ShowWater)
@@ -360,10 +375,10 @@ fn ui(
                                         .spawn_bundle(TextBundle {
                                             style: Style {
                                                 align_self: AlignSelf::Center,
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 ..Default::default()
                                             },
-                                            text: Text::with_section(
+                                            text: Text::from_section(
                                                 "Show Water",
                                                 TextStyle {
                                                     font: asset_server
@@ -371,7 +386,6 @@ fn ui(
                                                     font_size: 30.0,
                                                     color: GUI_STYLE.button_text_color,
                                                 },
-                                                Default::default(),
                                             ),
                                             ..Default::default()
                                         })
@@ -380,12 +394,12 @@ fn ui(
                             parent
                                 .spawn_bundle(ButtonBundle {
                                     style: Style {
-                                        margin: Rect::all(Val::Px(5.0)),
+                                        margin: UiRect::all(Val::Px(5.0)),
                                         justify_content: JustifyContent::Center,
                                         align_items: AlignItems::Center,
                                         ..Default::default()
                                     },
-                                    material: button_material.normal.clone(),
+                                    color: UiColor(GUI_STYLE.button_normal_color),
                                     ..Default::default()
                                 })
                                 .insert(GameEntity)
@@ -395,10 +409,10 @@ fn ui(
                                         .spawn_bundle(TextBundle {
                                             style: Style {
                                                 align_self: AlignSelf::Center,
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 ..Default::default()
                                             },
-                                            text: Text::with_section(
+                                            text: Text::from_section(
                                                 "Add Box",
                                                 TextStyle {
                                                     font: asset_server
@@ -406,7 +420,6 @@ fn ui(
                                                     font_size: 30.0,
                                                     color: GUI_STYLE.button_text_color,
                                                 },
-                                                Default::default(),
                                             ),
                                             ..Default::default()
                                         })
@@ -416,7 +429,7 @@ fn ui(
                             parent
                                 .spawn_bundle(ButtonBundle {
                                     style: Style {
-                                        margin: Rect::all(Val::Px(5.0)),
+                                        margin: UiRect::all(Val::Px(5.0)),
                                         justify_content: JustifyContent::Center,
                                         align_items: AlignItems::Center,
                                         ..Default::default()
@@ -455,14 +468,14 @@ fn ui(
                         .spawn_bundle(NodeBundle {
                             style: Style {
                                 size: Size::new(Val::Percent(100.0), Val::Auto),
-                                border: Rect::all(Val::Px(3.0)),
+                                border: UiRect::all(Val::Px(3.0)),
                                 justify_content: JustifyContent::FlexStart,
                                 flex_direction: FlexDirection::Row,
                                 align_items: AlignItems::FlexStart,
                                 align_self: AlignSelf::FlexStart,
                                 ..Default::default()
                             },
-                            material: button_material.bottom_panel.clone(),
+                            color: UiColor(GUI_STYLE.bottom_panel_color),
                             ..Default::default()
                         })
                         .insert(GameEntity)
@@ -471,14 +484,14 @@ fn ui(
                                 .spawn_bundle(NodeBundle {
                                     style: Style {
                                         size: Size::new(Val::Percent(100.0), Val::Auto),
-                                        border: Rect::all(Val::Px(3.0)),
+                                        border: UiRect::all(Val::Px(3.0)),
                                         justify_content: JustifyContent::FlexStart,
                                         flex_direction: FlexDirection::Row,
                                         align_items: AlignItems::FlexStart,
                                         align_self: AlignSelf::FlexStart,
                                         ..Default::default()
                                     },
-                                    material: button_material.bottom_subpanel.clone(),
+                                    color: UiColor(GUI_STYLE.bottom_subpanel_color),
                                     ..Default::default()
                                 })
                                 .insert(GameEntity)
@@ -486,12 +499,12 @@ fn ui(
                                     parent
                                         .spawn_bundle(ButtonBundle {
                                             style: Style {
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 justify_content: JustifyContent::Center,
                                                 align_items: AlignItems::Center,
                                                 ..Default::default()
                                             },
-                                            material: button_material.normal.clone(),
+                                            color: UiColor(GUI_STYLE.button_normal_color),
 
                                             ..Default::default()
                                         })
@@ -504,10 +517,8 @@ fn ui(
                                                         size: Size::new(Val::Px(50.0), Val::Auto),
                                                         ..Default::default()
                                                     },
-                                                    material: materials.add(
-                                                        asset_server
-                                                            .load("textures/pause.png")
-                                                            .into(),
+                                                    image: UiImage(
+                                                        asset_server.load("textures/pause.png"),
                                                     ),
                                                     ..Default::default()
                                                 })
@@ -518,13 +529,12 @@ fn ui(
                                     parent
                                         .spawn_bundle(ButtonBundle {
                                             style: Style {
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 justify_content: JustifyContent::Center,
                                                 align_items: AlignItems::Center,
                                                 ..Default::default()
                                             },
-                                            material: button_material.normal.clone(),
-
+                                            color: UiColor(GUI_STYLE.button_normal_color),
                                             ..Default::default()
                                         })
                                         .insert(PlayButton)
@@ -536,10 +546,8 @@ fn ui(
                                                         size: Size::new(Val::Px(50.0), Val::Auto),
                                                         ..Default::default()
                                                     },
-                                                    material: materials.add(
-                                                        asset_server
-                                                            .load("textures/play.png")
-                                                            .into(),
+                                                    image: UiImage(
+                                                        asset_server.load("textures/play.png"),
                                                     ),
                                                     ..Default::default()
                                                 })
@@ -550,18 +558,17 @@ fn ui(
                                     parent
                                         .spawn_bundle(TextBundle {
                                             style: Style {
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 ..Default::default()
                                             },
-                                            text: Text::with_section(
-                                                format!("x 1"),
+                                            text: Text::from_section(
+                                                "x 1",
                                                 TextStyle {
                                                     font: asset_server
                                                         .load("fonts/FiraSans-Bold.ttf"),
                                                     font_size: 30.0,
                                                     color: GUI_STYLE.text_color,
                                                 },
-                                                Default::default(),
                                             ),
                                             ..Default::default()
                                         })
@@ -573,13 +580,12 @@ fn ui(
                             parent
                                 .spawn_bundle(ButtonBundle {
                                     style: Style {
-                                        margin: Rect::all(Val::Px(5.0)),
+                                        margin: UiRect::all(Val::Px(5.0)),
                                         justify_content: JustifyContent::Center,
                                         align_items: AlignItems::Center,
                                         ..Default::default()
                                     },
-                                    material: button_material.normal.clone(),
-
+                                    color: UiColor(GUI_STYLE.button_normal_color),
                                     ..Default::default()
                                 })
                                 .insert(LeaveButton)
@@ -588,10 +594,10 @@ fn ui(
                                     parent
                                         .spawn_bundle(TextBundle {
                                             style: Style {
-                                                margin: Rect::all(Val::Px(5.0)),
+                                                margin: UiRect::all(Val::Px(5.0)),
                                                 ..Default::default()
                                             },
-                                            text: Text::with_section(
+                                            text: Text::from_section(
                                                 "Exit".to_string(),
                                                 TextStyle {
                                                     font: asset_server
@@ -599,7 +605,6 @@ fn ui(
                                                     font_size: 30.0,
                                                     color: GUI_STYLE.button_text_color,
                                                 },
-                                                Default::default(),
                                             ),
                                             ..Default::default()
                                         })
@@ -635,7 +640,7 @@ fn show_speed(
 fn pause_button(
     button_materials: Res<ButtonMaterial>,
     mut gui_state_query: Query<&mut GuiState, ()>,
-    mut queries: QuerySet<(
+    mut queries: ParamSet<(
         Query<
             &Interaction,
             (
@@ -643,7 +648,7 @@ fn pause_button(
                 Or<(With<PauseButton>, With<PauseTexture>)>,
             ),
         >,
-        Query<&mut Handle<ColorMaterial>, With<PauseButton>>,
+        Query<&mut UiColor, With<PauseButton>>,
     )>,
 ) {
     let mut gui_state = if let Some(state) = gui_state_query.iter_mut().next() {
@@ -652,7 +657,7 @@ fn pause_button(
         return;
     };
     let interaction = queries
-        .q0()
+        .p0()
         .iter()
         .fold(Interaction::None, |acc, x| match acc {
             Interaction::Clicked => acc,
@@ -663,7 +668,9 @@ fn pause_button(
             },
             Interaction::None => *x,
         });
-    let mut button_mat = if let Some(mat) = queries.q1_mut().iter_mut().next() {
+    let mut pause_query = queries.p1();
+
+    let mut button_mat = if let Some(mat) = pause_query.iter_mut().next() {
         mat
     } else {
         return;
@@ -672,20 +679,21 @@ fn pause_button(
         Interaction::Clicked => {
             if gui_state.water_speed >= 1 {
                 gui_state.water_speed = 0;
-                *button_mat = button_materials.pressed.clone();
+                *button_mat = UiColor(GUI_STYLE.button_pressed_color);
             } else {
-                *button_mat = button_materials.hovered.clone();
+                *button_mat = UiColor(GUI_STYLE.button_hover_color);
+
                 gui_state.water_speed = 1;
             }
         }
         Interaction::Hovered => {
-            *button_mat = button_materials.hovered.clone();
+            *button_mat = UiColor(GUI_STYLE.button_hover_color);
         }
         Interaction::None => {
             if gui_state.water_speed >= 1 {
-                *button_mat = button_materials.normal.clone();
+                *button_mat = UiColor(GUI_STYLE.button_normal_color);
             } else {
-                *button_mat = button_materials.pressed.clone();
+                *button_mat = UiColor(GUI_STYLE.button_pressed_color);
             }
         }
     };
@@ -693,13 +701,13 @@ fn pause_button(
 fn leave_button(
     button_materials: Res<ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
-    mut queries: QuerySet<(
+    mut queries: ParamSet<(
         Query<&Interaction, (With<Interaction>, Or<(With<LeaveButton>, With<LeaveText>)>)>,
-        Query<&mut Handle<ColorMaterial>, With<LeaveButton>>,
+        Query<&mut UiColor, With<LeaveButton>>,
     )>,
 ) {
     let interaction = queries
-        .q0()
+        .p0()
         .iter()
         .fold(Interaction::None, |acc, x| match acc {
             Interaction::Clicked => Interaction::Clicked,
@@ -710,17 +718,18 @@ fn leave_button(
             Interaction::None => *x,
         })
         .clone();
-    for mut material in queries.q1_mut().iter_mut() {
+    for mut material in queries.p1().iter_mut() {
         match interaction {
             Interaction::Clicked => {
-                *material = button_materials.pressed.clone();
+                *material = UiColor(GUI_STYLE.button_pressed_color);
+
                 state.set(GameState::Menu).expect("failed to set state");
             }
             Interaction::Hovered => {
-                *material = button_materials.hovered.clone();
+                *material = UiColor(GUI_STYLE.button_hover_color);
             }
             Interaction::None => {
-                *material = button_materials.normal.clone();
+                *material = UiColor(GUI_STYLE.button_normal_color);
             }
         };
     }
@@ -729,7 +738,7 @@ fn leave_button(
 fn play_button(
     button_materials: Res<ButtonMaterial>,
     mut gui_state_query: Query<&mut GuiState, ()>,
-    mut queries: QuerySet<(
+    mut queries: ParamSet<(
         Query<
             &Interaction,
             (
@@ -737,22 +746,23 @@ fn play_button(
                 Or<(With<PlayButton>, With<PlayTexture>)>,
             ),
         >,
-        Query<&mut Handle<ColorMaterial>, With<PlayButton>>,
+        Query<&mut UiColor, With<PlayButton>>,
     )>,
 ) {
-    let interaction = queries.q0().iter().next().copied();
+    let interaction = queries.p0().iter().next().copied();
     let mut gui_state = if let Some(state) = gui_state_query.iter_mut().next() {
         state
     } else {
         return;
     };
-    let mut play_material = if let Some(mat) = queries.q1_mut().iter_mut().next() {
+    let mut play_query = queries.p1();
+    let mut play_material = if let Some(mat) = play_query.iter_mut().next() {
         mat
     } else {
         return;
     };
     if gui_state.water_speed == 0 {
-        *play_material = button_materials.normal.clone();
+        *play_material = UiColor(GUI_STYLE.button_normal_color);
     }
 
     if let Some(interaction) = interaction {
@@ -777,10 +787,10 @@ fn play_button(
                     }
                 };
                 gui_state.water_speed = new_speed;
-                *play_material = button_materials.pressed.clone();
+                *play_material = UiColor(GUI_STYLE.button_pressed_color);
             }
             Interaction::Hovered => {
-                *play_material = button_materials.hovered.clone();
+                *play_material = UiColor(GUI_STYLE.button_hover_color);
             }
             Interaction::None => {}
         }
@@ -789,12 +799,9 @@ fn play_button(
 fn show_velocity_button(
     button_materials: Res<ButtonMaterial>,
     mut gui_state_query: Query<&mut GuiState, ()>,
-    mut queries: QuerySet<(
-        Query<
-            (&Interaction, &mut Handle<ColorMaterial>),
-            (Changed<Interaction>, With<ShowVelocities>),
-        >,
-        Query<(&Interaction, &mut Handle<ColorMaterial>), (Changed<Interaction>, With<ShowWater>)>,
+    mut queries: ParamSet<(
+        Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<ShowVelocities>)>,
+        Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<ShowWater>)>,
     )>,
 ) {
     let gui_state = gui_state_query.iter_mut().next();
@@ -803,46 +810,46 @@ fn show_velocity_button(
         return;
     }
     let mut gui_state = gui_state.unwrap();
-    for (interation, mut material) in queries.q0_mut().iter_mut() {
+    for (interation, mut material) in queries.p0().iter_mut() {
         match *interation {
             Interaction::Clicked => {
                 gui_state.show_velocities = !gui_state.show_velocities;
                 if gui_state.show_velocities {
-                    *material = button_materials.pressed.clone();
+                    *material = UiColor(GUI_STYLE.button_pressed_color);
                 } else {
-                    *material = button_materials.normal.clone();
+                    *material = UiColor(GUI_STYLE.button_normal_color);
                 }
             }
             Interaction::Hovered => {
                 if !gui_state.show_velocities {
-                    *material = button_materials.hovered.clone();
+                    *material = UiColor(GUI_STYLE.button_hover_color);
                 }
             }
             Interaction::None => {
                 if gui_state.show_velocities {
-                    *material = button_materials.pressed.clone();
+                    *material = UiColor(GUI_STYLE.button_pressed_color);
                 }
             }
         }
     }
-    for (interation, mut material) in queries.q1_mut().iter_mut() {
+    for (interation, mut material) in queries.p1().iter_mut() {
         match *interation {
             Interaction::Clicked => {
                 gui_state.show_water = !gui_state.show_water;
                 if gui_state.show_water {
-                    *material = button_materials.pressed.clone();
+                    *material = UiColor(GUI_STYLE.button_pressed_color);
                 } else {
-                    *material = button_materials.normal.clone();
+                    *material = UiColor(GUI_STYLE.button_normal_color);
                 }
             }
             Interaction::Hovered => {
                 if !gui_state.show_water {
-                    *material = button_materials.hovered.clone();
+                    *material = UiColor(GUI_STYLE.button_hover_color);
                 }
             }
             Interaction::None => {
                 if gui_state.show_water {
-                    *material = button_materials.pressed.clone();
+                    *material = UiColor(GUI_STYLE.button_pressed_color);
                 }
             }
         }
@@ -851,24 +858,22 @@ fn show_velocity_button(
 fn save_water(
     button_materials: Res<ButtonMaterial>,
     solver_query: Query<&FiniteSolver, With<FiniteSolver>>,
-    mut query: Query<
-        (&Interaction, &mut Handle<ColorMaterial>),
-        (With<SaveWaterButton>, Changed<Interaction>),
-    >,
+    mut query: Query<(&Interaction, &mut UiColor), (With<SaveWaterButton>, Changed<Interaction>)>,
 ) {
     for (interaction, mut mat) in query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
-                *mat = button_materials.pressed.clone();
+                *mat = UiColor(GUI_STYLE.button_pressed_color);
+
                 if let Some(solver) = solver_query.iter().next() {
                     crate::file_save::save(&solver.numpy_data());
                 }
             }
             Interaction::Hovered => {
-                *mat = button_materials.hovered.clone();
+                *mat = UiColor(GUI_STYLE.button_hover_color);
             }
             Interaction::None => {
-                *mat = button_materials.normal.clone();
+                *mat = UiColor(GUI_STYLE.button_normal_color);
             }
         }
     }
@@ -879,10 +884,7 @@ fn add_box_button(
     aabb_material: Res<AABBMaterial>,
     mut meshes: ResMut<Assets<Mesh>>,
     solver_query: Query<&FiniteSolver, ()>,
-    mut queries: Query<
-        (&Interaction, &mut Handle<ColorMaterial>),
-        (Changed<Interaction>, With<AddBoxButton>),
-    >,
+    mut queries: Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<AddBoxButton>)>,
 ) {
     for (interation, mut material) in queries.iter_mut() {
         match *interation {
@@ -905,13 +907,13 @@ fn add_box_button(
                     mean_h,
                     Vector2::new(water.h().x(), water.h().y()),
                 );
-                *material = button_materials.pressed.clone();
+                *material = UiColor(GUI_STYLE.button_pressed_color);
             }
             Interaction::Hovered => {
-                *material = button_materials.hovered.clone();
+                *material = UiColor(GUI_STYLE.button_hover_color);
             }
             Interaction::None => {
-                *material = button_materials.normal.clone();
+                *material = UiColor(GUI_STYLE.button_normal_color);
             }
         }
     }
@@ -919,11 +921,12 @@ fn add_box_button(
 
 fn solve_info(
     mut _commands: Commands,
-    solve_query: Query<&Vec<SolveInfo>, With<WaterMarker>>,
+    solve_query: Query<&SolveInfoVec, With<WaterMarker>>,
     mut query: Query<&mut Text, With<SolveInfoLabel>>,
 ) {
     if let Some(info_vec) = solve_query.iter().next() {
         let formatted_str = info_vec
+            .data
             .iter()
             .map(|info| format!("{}: {}", info.name, info.data))
             .fold(String::new(), |acc, x| acc + "\n" + &x);

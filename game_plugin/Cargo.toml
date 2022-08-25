@@ -7,27 +7,30 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[features]
-default = [
-    "bevy/bevy_gltf",
-    "bevy/bevy_winit",
-    "bevy/render",
-    "bevy/png"
-]
+# [features]
+# default = [
+#     "bevy/bevy_gltf",
+#     "bevy/bevy_winit",
+#     "bevy/render",
+#     "bevy/png"
+# ]
 
-native = [
-    "bevy/bevy_wgpu",
-    "bevy-inspector-egui"
-]
+#native = [
+# #   "bevy/bevy_wgpu",
+# #   "bevy-inspector-egui"
+#]
 
 [dependencies]
-bevy = { version = "0.5.0", default-features = false }
-smooth-bevy-cameras = {path="../smooth-bevy-cameras"}
-bevy_transform_gizmo = {path="../bevy_transform_gizmo"}
-bevy_mod_picking = {path="../bevy_mod_picking"}
-bevy_asset_loader = { version = "0.6.0" }
-rfd = "0.6.1"
+bevy = { version = "0.8"}
+# smooth-bevy-cameras = {path="../smooth-bevy-cameras"}
+# bevy_transform_gizmo = {path="../bevy_transform_gizmo"}
+# bevy_mod_picking = {path="../bevy_mod_picking"}
+ bevy_asset_loader = { version = "0.12.1" }
+# rfd = "0.6.1"
 nalgebra = "0.29.0"
 pulldown-cmark = "0.8.0"
-bevy-inspector-egui = {version = "0.6.1",optional=true}
+# bevy-inspector-egui = {version = "0.6.1",optional=true}
+bevy_transform_gizmo = "0.3.1"
+bevy_mod_picking = "0.8.2"
+smooth-bevy-cameras={git = "https://github.com/bonsairobo/smooth-bevy-cameras", rev = "a1095b9bc563d459c79b59e12ef620fa4567e04e" }
 water_sim = {path = "../water_sim"}

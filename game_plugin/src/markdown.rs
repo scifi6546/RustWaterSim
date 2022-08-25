@@ -6,48 +6,52 @@ pub struct DocumentPlugin;
 mod page;
 pub use page::{Document, Page};
 impl Plugin for DocumentPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         info!("building document plugin");
         app.add_system_set(
             SystemSet::on_enter(GameState::Loading)
-                .with_system(page::setup.system())
+                .with_system(page::setup)
                 .label(BuiltParentLabel),
         );
         app.add_system_set(
             SystemSet::on_update(GameState::Menu)
-                .with_system(nav_system.system())
-                .with_system(page::button.system()),
+                .with_system(nav_system)
+                .with_system(page::button),
         );
 
         app.add_system_set(
             SystemSet::on_update(GameState::Playing)
-                .with_system(nav_system.system())
-                .with_system(page::button.system()),
+                .with_system(nav_system)
+                .with_system(page::button),
         );
         app.add_system_set(
             SystemSet::on_update(GameState::Page)
-                .with_system(nav_system.system())
-                .with_system(page::button.system()),
+                .with_system(nav_system)
+                .with_system(page::button),
         );
 
-        app.add_system_set(
-            SystemSet::on_enter(GameState::Page).with_system(page::setup_page.system()),
-        );
+        app.add_system_set(SystemSet::on_enter(GameState::Page).with_system(page::setup_page));
 
-        app.add_system_set(SystemSet::on_exit(GameState::Page).with_system(despawn_gui.system()));
+        app.add_system_set(SystemSet::on_exit(GameState::Page).with_system(despawn_gui));
     }
 }
+#[derive(Copy, Clone, Component, Debug)]
 pub struct RootNode;
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
+#[derive(Debug, Hash, PartialEq, Eq, SystemLabel, Copy, Clone, Component)]
 pub struct BuiltParentLabel;
 /// root note of gui
+#[derive(Copy, Clone, Component, Debug)]
 pub struct GuiParent;
 /// parent of document gui
+#[derive(Copy, Clone, Component, Debug)]
 pub struct DocumentGuiParent;
+#[derive(Copy, Clone, Component, Debug)]
 pub struct SimulationButton;
+#[derive(Copy, Clone, Component, Debug)]
 pub struct PageButton {
     pub index: usize,
 }
+#[derive(Copy, Clone, Component, Debug)]
 pub struct PageButtonMarker;
 pub fn build_gui(
     commands: &mut Commands,
@@ -60,7 +64,7 @@ pub fn build_gui(
         &mut ResMut<Assets<ColorMaterial>>,
         &Res<FontAssets>,
         &Res<ButtonMaterial>,
-        &mut ChildBuilder<'_, '_>,
+        &mut ChildBuilder<'_, '_, '_>,
     ),
 ) {
     commands
@@ -74,7 +78,12 @@ pub fn build_gui(
                 flex_direction: FlexDirection::ColumnReverse,
                 ..Default::default()
             },
-            material: materials.add(Color::NONE.into()),
+            color: UiColor(Color::Rgba {
+                red: 0.0,
+                green: 0.0,
+                blue: 0.0,
+                alpha: 0.0,
+            }),
             ..Default::default()
         })
         .insert(RootNode)
@@ -92,7 +101,12 @@ pub fn build_gui(
                         flex_direction: FlexDirection::ColumnReverse,
                         ..Default::default()
                     },
-                    material: materials.add(Color::NONE.into()),
+                    color: UiColor(Color::Rgba {
+                        red: 0.0,
+                        green: 0.0,
+                        blue: 0.0,
+                        alpha: 0.0,
+                    }),
                     ..Default::default()
                 })
                 .insert(GuiParent)
@@ -103,7 +117,7 @@ pub fn build_gui(
 }
 
 fn build_navbar<'a>(
-    parent: &mut ChildBuilder<'_, 'a>,
+    parent: &mut ChildBuilder<'_, '_, '_>,
     font_assets: &Res<FontAssets>,
     document: &Res<Document>,
     materials: &ButtonMaterial,
@@ -116,19 +130,19 @@ fn build_navbar<'a>(
 
                 ..Default::default()
             },
-            material: materials.nav_bar_bg.clone(),
+            color: UiColor(GUI_STYLE.nav_bar_bg_color),
             ..Default::default()
         })
         .with_children(|parent| {
             parent
                 .spawn_bundle(ButtonBundle {
                     style: Style {
-                        margin: Rect::all(Val::Px(5.0)),
+                        margin: UiRect::all(Val::Px(5.0)),
                         justify_content: JustifyContent::Center,
                         align_items: AlignItems::Center,
                         ..Default::default()
                     },
-                    material: materials.nav_bar_button_normal.clone(),
+                    color: UiColor(GUI_STYLE.nav_bar_button_normal),
                     ..Default::default()
                 })
                 .insert(SimulationButton)
@@ -152,12 +166,12 @@ fn build_navbar<'a>(
                 parent
                     .spawn_bundle(ButtonBundle {
                         style: Style {
-                            margin: Rect::all(Val::Px(5.0)),
+                            margin: UiRect::all(Val::Px(5.0)),
                             justify_content: JustifyContent::Center,
                             align_items: AlignItems::Center,
                             ..Default::default()
                         },
-                        material: materials.nav_bar_button_normal.clone(),
+                        color: UiColor(GUI_STYLE.nav_bar_button_normal),
                         ..Default::default()
                     })
                     .insert(PageButton { index })

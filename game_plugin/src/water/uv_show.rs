@@ -4,7 +4,7 @@ use bevy::{
     prelude::*,
     render::{
         mesh::{Indices, VertexAttributeValues},
-        pipeline::PrimitiveTopology,
+        render_resource::PrimitiveTopology,
     },
 };
 /// appends cube to mesh
@@ -45,11 +45,12 @@ pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f
     indices.append(&mut indices_push);
     if mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION).is_none() {
         let data: Vec<[f32; 3]> = vec![];
-        mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, data);
+
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, data);
     }
     let position = mesh.attribute_mut(Mesh::ATTRIBUTE_POSITION).unwrap();
     let position = match position {
-        VertexAttributeValues::Float3(v) => v,
+        VertexAttributeValues::Float32x3(v) => v,
         _ => panic!("invalid vertex type"),
     };
     // face 0
@@ -170,11 +171,11 @@ pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f
 
     if mesh.attribute(Mesh::ATTRIBUTE_UV_0).is_none() {
         let data: Vec<[f32; 2]> = vec![];
-        mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, data);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, data);
     }
     let uv = mesh.attribute_mut(Mesh::ATTRIBUTE_UV_0).unwrap();
     let uv = match uv {
-        VertexAttributeValues::Float2(v) => v,
+        VertexAttributeValues::Float32x2(v) => v,
         _ => panic!("invalid vertex type"),
     };
     //face 0
@@ -209,12 +210,12 @@ pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f
     uv.push([1.0, 1.0]);
     if mesh.attribute(Mesh::ATTRIBUTE_NORMAL).is_none() {
         let data: Vec<[f32; 3]> = vec![];
-        mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, data);
+        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, data);
     }
 
     let normal = mesh.attribute_mut(Mesh::ATTRIBUTE_NORMAL).unwrap();
     let normal = match normal {
-        VertexAttributeValues::Float3(v) => v,
+        VertexAttributeValues::Float32x3(v) => v,
         _ => panic!("invalid vertex type"),
     };
 
@@ -251,7 +252,9 @@ pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f
     normal.push([0.0, -1.0, 0.0]);
     normal.push([0.0, -1.0, 0.0]);
 }
+#[derive(Clone, Copy, Component, Debug)]
 pub struct UShow;
+#[derive(Clone, Copy, Component, Debug)]
 pub struct VShow;
 pub fn build_uv_cubes(
     mut commands: Commands,
@@ -262,9 +265,9 @@ pub fn build_uv_cubes(
     let position: Vec<[f32; 3]> = vec![];
     let normal: Vec<[f32; 3]> = vec![];
     let uv: Vec<[f32; 2]> = vec![];
-    cube.set_attribute(Mesh::ATTRIBUTE_POSITION, position);
-    cube.set_attribute(Mesh::ATTRIBUTE_NORMAL, normal);
-    cube.set_attribute(Mesh::ATTRIBUTE_UV_0, uv);
+    cube.insert_attribute(Mesh::ATTRIBUTE_POSITION, position);
+    cube.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normal);
+    cube.insert_attribute(Mesh::ATTRIBUTE_UV_0, uv);
 
     let transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     commands
@@ -289,14 +292,14 @@ pub fn run_uv_cubes(
     mut mesh_assets: ResMut<Assets<Mesh>>,
     gui_query: Query<&GuiState>,
     water_query: Query<&FiniteSolver, ()>,
-    mut queries: QuerySet<(
-        Query<(&Handle<Mesh>, &mut Visible), With<UShow>>,
-        Query<(&Handle<Mesh>, &mut Visible), With<VShow>>,
+    mut queries: ParamSet<(
+        Query<(&Handle<Mesh>, &mut Visibility), With<UShow>>,
+        Query<(&Handle<Mesh>, &mut Visibility), With<VShow>>,
     )>,
 ) {
     const CUBE_SCALE: f32 = 0.04;
     const Y_SCALE: f32 = 1000.0;
-    let u_cubes = queries.q0_mut();
+    let mut u_cubes = queries.p0();
     let gui_state = gui_query.iter().next();
     if gui_state.is_none() {
         error!("gui state not found");
@@ -333,7 +336,7 @@ pub fn run_uv_cubes(
             }
         }
     }
-    let v_cubes = queries.q1_mut();
+    let mut v_cubes = queries.p1();
     for (mesh, mut visible) in v_cubes.iter_mut() {
         if !gui_state.show_velocities {
             visible.is_visible = false;

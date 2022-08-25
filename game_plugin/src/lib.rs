@@ -11,11 +11,11 @@ use crate::actions::ActionsPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::player::PlayerPlugin;
-use bevy::app::AppBuilder;
 
 #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
+use bevy::winit;
 use game_menu::GameMenuPlugin;
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
@@ -29,7 +29,8 @@ pub mod prelude {
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
-        AABBBarrier, FiniteSolver, InitialConditions, SolveInfo, WaterMarker, WATER_SIZE,
+        AABBBarrier, FiniteSolver, InitialConditions, SolveInfo, SolveInfoVec, WaterMarker,
+        WATER_SIZE,
     };
     pub use water_sim::CONDITIONS;
 }
@@ -50,19 +51,23 @@ pub enum GameState {
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_state(GameState::Loading)
-            .add_plugin(bevy_mod_picking::DefaultPickingPlugins)
-            .add_plugin(bevy_transform_gizmo::TransformGizmoPlugin)
+            .add_plugins(bevy_mod_picking::DefaultPickingPlugins)
+            .add_plugin(bevy_transform_gizmo::TransformGizmoPlugin::default())
             .add_plugin(LoadingPlugin)
+            .insert_resource(winit::WinitSettings::desktop_app())
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(input::CameraInput)
             .add_plugin(markdown::DocumentPlugin)
             .add_plugin(LookTransformPlugin)
-            .add_plugin(OrbitCameraPlugin)
+            .add_plugin(OrbitCameraPlugin {
+                override_input_system: false,
+            })
             .add_plugin(WaterPlugin)
             .add_plugin(GameMenuPlugin)
+
             .add_plugin(PlayerPlugin);
 
         #[cfg(debug_assertions)]

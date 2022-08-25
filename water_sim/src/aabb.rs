@@ -1,5 +1,6 @@
+use bevy::prelude::*;
 use nalgebra::Vector2;
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Component)]
 pub struct AABBBarrier {
     pub top_right: Vector2<i32>,
     pub bottom_left: Vector2<i32>,

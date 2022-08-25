@@ -1,5 +1,5 @@
 use super::{build_gui, FontAssets, RootNode};
-use crate::prelude::ButtonMaterial;
+use crate::prelude::{ButtonMaterial, GUI_STYLE};
 use pulldown_cmark::{Event, Parser, Tag};
 
 use crate::GameState;
@@ -94,7 +94,6 @@ pub fn button(
     mut page_state: ResMut<PageState>,
     materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
-
     mut state: ResMut<State<GameState>>,
     mut query: Query<
         (&mut Handle<ColorMaterial>, &Interaction, &super::PageButton),
@@ -162,7 +161,7 @@ pub fn setup_page(
                         flex_direction: FlexDirection::ColumnReverse,
                         ..Default::default()
                     },
-                    material: buttom_materials.page.clone(),
+                    color: UiColor(GUI_STYLE.page_color),
                     ..Default::default()
                 })
                 .with_children(|parent| {
@@ -257,8 +256,7 @@ pub fn setup_page(
                                         size,
                                         ..Default::default()
                                     },
-                                    material: materials
-                                        .add(asset_server.load(path.as_str()).into()),
+                                    image: UiImage(asset_server.load(&path)),
                                     ..Default::default()
                                 });
                             }

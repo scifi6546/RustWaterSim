@@ -1,7 +1,10 @@
 use crate::prelude::{CameraLabel, GameEntity, GuiState, SelectStartupInfo};
 use crate::GameState;
 pub use aabb::aabb_barrier_from_transform;
-use bevy::{prelude::*, render::mesh::Indices, render::pipeline::PrimitiveTopology};
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+};
 pub use water_sim::{AABBBarrier, FiniteSolver, SolveInfo};
 pub mod aabb;
 use aabb::AABBMaterial;
@@ -18,12 +21,16 @@ use nalgebra::{Vector2, Vector3};
 pub enum WaterLabel {
     InsertAABBMaterial,
 }
+#[derive(Component, Clone, Debug)]
+pub struct SolveInfoVec {
+    pub data: Vec<SolveInfo>,
+}
 pub struct WaterPlugin;
 impl Plugin for WaterPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.add_system_set(
             SystemSet::on_enter(GameState::Loading)
-                .with_system(aabb::insert_aabb_material.system())
+                .with_system(aabb::insert_aabb_material)
                 .label(WaterLabel::InsertAABBMaterial),
         );
         // build system set
@@ -31,18 +38,18 @@ impl Plugin for WaterPlugin {
             SystemSet::on_enter(GameState::Playing)
                 .after(CameraLabel)
                 .after(WaterLabel::InsertAABBMaterial)
-                .with_system(spawn_water_system.system())
-                .with_system(uv_show::build_uv_cubes.system()),
+                .with_system(spawn_water_system)
+                .with_system(uv_show::build_uv_cubes),
         )
         // update system set
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
                 .after(CameraLabel)
                 .after(WaterLabel::InsertAABBMaterial)
-                .with_system(water_simulation.system())
-                .with_system(show_water.system())
-                .with_system(aabb::aabb_transform.system())
-                .with_system(uv_show::run_uv_cubes.system()),
+                .with_system(water_simulation)
+                .with_system(show_water)
+                .with_system(aabb::aabb_transform)
+                .with_system(uv_show::run_uv_cubes),
         );
     }
 }
@@ -108,13 +115,15 @@ fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
     }
 
     let indicies = (0..position.len()).map(|i| i as u32).collect();
-    mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, position);
-    mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-    mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, position);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
     mesh.set_indices(Some(Indices::U32(indicies)));
 }
 
+#[derive(Component)]
 pub struct WaterMarker;
+#[derive(Component)]
 pub struct GroundMarker;
 fn spawn_water_system(
     mut commands: Commands,
@@ -145,7 +154,7 @@ fn spawn_water_system(
             ..Default::default()
         })
         .insert(water)
-        .insert(info)
+        .insert(SolveInfoVec { data: info })
         .insert(GameEntity)
         .insert(WaterMarker);
     commands
@@ -182,7 +191,7 @@ fn water_simulation(
             &mut Transform,
             &mut FiniteSolver,
             &Handle<Mesh>,
-            &mut Vec<SolveInfo>,
+            &mut SolveInfoVec,
         ),
         With<WaterMarker>,
     >,
@@ -202,16 +211,17 @@ fn water_simulation(
             water.solve(&aabb_vec);
         });
         let (_, out_info) = water.solve(&aabb_vec);
+
         let heights = water.offset_h();
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
         build_mesh(&heights, &mut mesh);
-        *info = out_info;
+        info.data = out_info;
     }
 }
 /// Handles showing velocities and water
 fn show_water(
-    mut water_query: Query<(&mut Transform, &mut Visible, &mut FiniteSolver), With<WaterMarker>>,
+    mut water_query: Query<(&mut Transform, &mut Visibility, &mut FiniteSolver), With<WaterMarker>>,
     gui_query: Query<&GuiState, Changed<GuiState>>,
 ) {
     let gui_state = gui_query.iter().next();

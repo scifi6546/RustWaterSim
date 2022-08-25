@@ -9,7 +9,7 @@ use bevy::DefaultPlugins;
 use game_plugin::GamePlugin;
 
 fn main() {
-    let mut app = App::build();
+    let mut app = App::new();
     app.insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
         .insert_resource(WindowDescriptor {
             width: 1400.,
@@ -19,7 +19,8 @@ fn main() {
         })
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
-        .add_plugin(GamePlugin);
+        .add_plugin(GamePlugin)
+        .insert_resource(bevy::winit::WinitSettings::game());
 
     #[cfg(target_arch = "wasm32")]
     app.add_plugin(bevy_webgl2::WebGL2Plugin);

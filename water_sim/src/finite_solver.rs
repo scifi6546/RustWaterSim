@@ -3,6 +3,7 @@
 ///  - When having circle there is interference that breaks the model  
 ///     propagating backwards from wave front
 use super::{AABBBarrier, Grid, SolveInfo};
+use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::f32::consts::PI;
 /// Axis aligned bounding box
@@ -46,7 +47,7 @@ impl Source {
         }
     }
 }
-
+#[derive(Component)]
 pub struct FiniteSolver {
     /// Ground Height
     g_h: Grid<f32>,

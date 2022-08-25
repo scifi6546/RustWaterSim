@@ -7,34 +7,36 @@ use crate::GameState;
 use bevy::prelude::*;
 
 pub struct MenuPlugin;
+#[derive(Component)]
 struct MenuItem;
 
 /// This plugin is responsible for the game menu (containing only one button...)
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
-    fn build(&self, app: &mut AppBuilder) {
+    fn build(&self, app: &mut App) {
         app.init_resource::<ButtonMaterial>()
             .add_system_set(
                 SystemSet::on_enter(GameState::Menu)
-                    .with_system(setup_menu.system())
+                    .with_system(setup_menu)
                     .after(BuiltParentLabel),
             )
             .add_system_set(
                 SystemSet::on_update(GameState::Menu)
-                    .with_system(conditions_button.system())
-                    .with_system(nav_system.system()),
+                    .with_system(conditions_button)
+                    .with_system(nav_system),
             )
-            .add_system_set(SystemSet::on_exit(GameState::Menu).with_system(despawn_gui.system()));
+            .add_system_set(SystemSet::on_exit(GameState::Menu).with_system(despawn_gui));
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Component)]
 pub struct SelectStartupInfo {
     /// index in CONDITIONS to spawn
     pub index: usize,
     /// name of startup condition.
     pub name: String,
 }
+#[derive(Debug, Clone, Component)]
 struct SelectStartup;
 
 fn setup_menu(
@@ -44,7 +46,6 @@ fn setup_menu(
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
 ) {
-    commands.spawn_bundle(UiCameraBundle::default());
     build_gui(
         &mut commands,
         &mut materials,
@@ -58,13 +59,13 @@ fn setup_menu(
                 .spawn_bundle(NodeBundle {
                     style: Style {
                         //size: Size::new(Val::Px(120.0), Val::Px(50.0)),
-                        margin: Rect::all(Val::Auto),
+                        margin: UiRect::all(Val::Auto),
                         justify_content: JustifyContent::FlexStart,
                         flex_direction: FlexDirection::Column,
                         align_items: AlignItems::Center,
                         ..Default::default()
                     },
-                    material: button_materials.main_menu_bg.clone(),
+                    color: UiColor(GUI_STYLE.main_menu_bg_color),
                     ..Default::default()
                 })
                 .insert(MenuItem)
@@ -74,12 +75,12 @@ fn setup_menu(
                             .spawn_bundle(ButtonBundle {
                                 style: Style {
                                     size: Size::new(Val::Px(420.0), Val::Px(50.0)),
-                                    margin: Rect::all(Val::Px(5.0)),
+                                    margin: UiRect::all(Val::Px(5.0)),
                                     justify_content: JustifyContent::Center,
                                     align_items: AlignItems::Center,
                                     ..Default::default()
                                 },
-                                material: button_materials.normal.clone(),
+                                color: UiColor(GUI_STYLE.button_normal_color),
                                 ..Default::default()
                             })
                             .insert(SelectStartupInfo {
@@ -117,21 +118,24 @@ fn conditions_button(
     button_materials: Res<ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
     mut interaction_query: Query<
-        (&Interaction, &mut Handle<ColorMaterial>, &SelectStartupInfo),
+        (&Interaction, &mut UiColor, &SelectStartupInfo),
         (Changed<Interaction>, With<Button>, With<SelectStartup>),
     >,
 ) {
+    info!("running conditions");
     for (interaction, mut material, select_info) in interaction_query.iter_mut() {
+        info!("running iteractions query");
         match *interaction {
             Interaction::Clicked => {
                 state.set(GameState::Playing).unwrap();
                 commands.insert_resource(select_info.clone());
             }
             Interaction::Hovered => {
-                *material = button_materials.hovered.clone();
+                info!("hovered");
+                *material = UiColor(GUI_STYLE.button_hover_color);
             }
             Interaction::None => {
-                *material = button_materials.normal.clone();
+                *material = UiColor(GUI_STYLE.button_normal_color);
             }
         }
     }

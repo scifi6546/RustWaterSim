@@ -5,8 +5,8 @@ use bevy::{
 use smooth_bevy_cameras::controllers::orbit::{ControlEvent, OrbitCameraController};
 pub struct CameraInput;
 impl Plugin for CameraInput {
-    fn build(&self, app: &mut AppBuilder) {
-        app.add_system(default_input_map.system());
+    fn build(&self, app: &mut App) {
+        app.add_system(default_input_map);
     }
 }
 pub fn default_input_map(

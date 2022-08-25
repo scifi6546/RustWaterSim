@@ -1,6 +1,3 @@
-[submodule "smooth-bevy-cameras"]
-	path = smooth-bevy-cameras
-	url = git@github.com:scifi6546/smooth-bevy-cameras.git
 [submodule "bevy_transform_gizmo"]
 	path = bevy_transform_gizmo
 	url = git@github.com:scifi6546/bevy_transform_gizmo.git
