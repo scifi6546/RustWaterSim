@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy="0.8.1"
+bevy="0.8"
 yew="0.19.3"
 web-sys = { version="0.3.59", features=["Document", "Window"] }
 stylist = { version= "0.10.1", features=["yew_integration"] }

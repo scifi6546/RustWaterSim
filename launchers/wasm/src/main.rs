@@ -8,11 +8,11 @@ fn view() -> Html {
         .map(|w| w.document())
         .flatten()
         .expect("failed to get DOM")
-        .set_title("HELLO FROM RUST");
+        .set_title("RUST");
     global_style! {
         r#"
         html{
-            min_height:100%;
+            min-height:100%;
             position:relative;
 
         }
@@ -42,17 +42,17 @@ fn view() -> Html {
 fn main() {
     yew::start_app::<Root>();
     let mut app = App::new();
-    app.insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
+    app
       //  .add_plugin(GamePlugin)
         .insert_resource(WindowDescriptor {
-            title: "Bevy game".to_string(), // ToDo
+            title: "RUST".to_string(), // ToDo
             canvas: Some("#bevy".to_string()),
             fit_canvas_to_parent: true,
-            height:100.,
+          //  height:100.,
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
-        //     .add_plugin(GamePlugin)
+             .add_plugin(GamePlugin).insert_resource(bevy::winit::WinitSettings::game())
         //       .insert_resource(Msaa { samples: 4 })
         ;
 
