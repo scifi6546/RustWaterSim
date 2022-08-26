@@ -1,0 +1,8 @@
+[build]
+target = "launchers/wasm/index.html"
+[watch]
+watch = ["game_plugin","launchers/wasm/index.html","launchers/wasm/src/main.rs"]
+[[hooks]]
+stage = "pre_build"
+command = "cp"
+command_arguments = ["-r","assets","launchers/wasm/"]
