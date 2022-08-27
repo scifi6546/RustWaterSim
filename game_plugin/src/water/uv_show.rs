@@ -1,4 +1,4 @@
-use super::{FiniteSolver, WATER_SIZE};
+use super::WATER_SIZE;
 use crate::prelude::{GameEntity, GuiState};
 use bevy::{
     prelude::*,
@@ -7,6 +7,7 @@ use bevy::{
         render_resource::PrimitiveTopology,
     },
 };
+use water_sim::{PreferredSolver, Solver};
 /// appends cube to mesh
 pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f32) {
     let x: f32 = translation.x;
@@ -291,12 +292,14 @@ pub fn build_uv_cubes(
 pub fn run_uv_cubes(
     mut mesh_assets: ResMut<Assets<Mesh>>,
     gui_query: Query<&GuiState>,
-    water_query: Query<&FiniteSolver, ()>,
+    water_query: Query<&PreferredSolver, ()>,
     mut queries: ParamSet<(
         Query<(&Handle<Mesh>, &mut Visibility), With<UShow>>,
         Query<(&Handle<Mesh>, &mut Visibility), With<VShow>>,
     )>,
 ) {
+    //panic!()
+    /*
     const CUBE_SCALE: f32 = 0.04;
     const Y_SCALE: f32 = 1000.0;
     let mut u_cubes = queries.p0();
@@ -312,7 +315,7 @@ pub fn run_uv_cubes(
         return;
     }
     let water = water.unwrap();
-    let multiplier = WATER_SIZE / water.h().x() as f32;
+    let multiplier = WATER_SIZE / water.water_h().x() as f32;
 
     for (mesh, mut visible) in u_cubes.iter_mut() {
         if !gui_state.show_velocities {
@@ -358,5 +361,5 @@ pub fn run_uv_cubes(
                 );
             }
         }
-    }
+    }*/
 }

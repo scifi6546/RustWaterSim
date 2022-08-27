@@ -1,8 +1,8 @@
-use super::{FiniteSolver, HEIGHT_MULTIPLIER, WATER_SIZE};
+use super::{HEIGHT_MULTIPLIER, WATER_SIZE};
 use crate::prelude::GameEntity;
 use bevy::prelude::*;
 use nalgebra::Vector2;
-use water_sim::AABBBarrier;
+use water_sim::{AABBBarrier, PreferredSolver, Solver};
 pub struct AABBMaterial {
     pub material: Handle<StandardMaterial>,
 }
@@ -14,8 +14,8 @@ pub fn insert_aabb_material(
     info!("inserting aabb");
     commands.insert_resource(AABBMaterial { material });
 }
-pub fn aabb_barrier_from_transform(transform: Transform, water: &FiniteSolver) -> AABBBarrier {
-    let water_x = water.h().x();
+pub fn aabb_barrier_from_transform(transform: Transform, water: &PreferredSolver) -> AABBBarrier {
+    let water_x = water.water_h().x();
     let scaling = water_x as f32 / WATER_SIZE;
     let lower = scaling * (transform.translation - 0.5 * transform.scale);
     let upper = scaling * (transform.translation + 0.5 * transform.scale);
@@ -76,7 +76,7 @@ pub fn build_barrier(
         .insert(aabb);
 }
 pub fn aabb_transform(
-    water_query: Query<&FiniteSolver, With<FiniteSolver>>,
+    water_query: Query<&PreferredSolver, ()>,
     mut box_query: Query<(&mut AABBBarrier, &Transform), Changed<Transform>>,
 ) {
     let water = if let Some(water) = water_query.iter().next() {
@@ -84,7 +84,7 @@ pub fn aabb_transform(
     } else {
         return;
     };
-    let water_x = water.h().x();
+    let water_x = water.water_h().x();
     let scaling = water_x as f32 / WATER_SIZE;
     for (mut aabb, transform) in box_query.iter_mut() {
         let lower = scaling * (transform.translation - 0.5 * transform.scale);

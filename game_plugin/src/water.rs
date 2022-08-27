@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-pub use water_sim::{AABBBarrier, FiniteSolver, SolveInfo};
+pub use water_sim::{get_conditions, AABBBarrier, PreferredSolver, SolveInfo, Solver};
 pub mod aabb;
 use aabb::AABBMaterial;
 //pub use finite_solver::FiniteSolver;
@@ -132,20 +132,21 @@ fn spawn_water_system(
     startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let water_fn = water_sim::CONDITIONS[startup_info.index].build_water_fn;
+    let conditions = get_conditions::<PreferredSolver>();
+    let water_fn = conditions[startup_info.index].build_water_fn;
     let (water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
-    let scale = WATER_SIZE / water.h().x() as f32;
+    let scale = WATER_SIZE / water.water_h().x() as f32;
 
     transform.scale = Vec3::new(scale, scale, scale);
     let info: Vec<SolveInfo> = vec![];
     let mean_h = water.mean_height();
-    let water_dimensions = Vector2::new(water.h().x(), water.h().y());
+    let water_dimensions = Vector2::new(water.water_h().x(), water.water_h().y());
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     let mut ground_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    build_mesh(&water.g_h(), &mut ground_mesh);
-    build_mesh(&water.offset_h(), &mut mesh);
+    build_mesh(&water.ground_h(), &mut ground_mesh);
+    build_mesh(&water.offset_water(), &mut mesh);
     commands
         .spawn_bundle(PbrBundle {
             material: materials.add(Color::rgb(0.25, 0.25, 0.7).into()),
@@ -180,7 +181,7 @@ fn spawn_water_system(
 }
 pub struct InitialConditions {
     pub name: &'static str,
-    pub build_water_fn: fn() -> (FiniteSolver, Vec<AABBBarrier>),
+    pub build_water_fn: fn() -> (PreferredSolver, Vec<AABBBarrier>),
 }
 fn water_simulation(
     _commands: Commands,
@@ -189,7 +190,7 @@ fn water_simulation(
     mut water_query: Query<
         (
             &mut Transform,
-            &mut FiniteSolver,
+            &mut PreferredSolver,
             &Handle<Mesh>,
             &mut SolveInfoVec,
         ),
@@ -212,7 +213,7 @@ fn water_simulation(
         });
         let (_, out_info) = water.solve(&aabb_vec);
 
-        let heights = water.offset_h();
+        let heights = water.offset_water();
 
         let mut mesh = mesh_assets.get_mut(mesh).unwrap();
         build_mesh(&heights, &mut mesh);
@@ -221,7 +222,10 @@ fn water_simulation(
 }
 /// Handles showing velocities and water
 fn show_water(
-    mut water_query: Query<(&mut Transform, &mut Visibility, &mut FiniteSolver), With<WaterMarker>>,
+    mut water_query: Query<
+        (&mut Transform, &mut Visibility, &mut PreferredSolver),
+        With<WaterMarker>,
+    >,
     gui_query: Query<&GuiState, Changed<GuiState>>,
 ) {
     let gui_state = gui_query.iter().next();

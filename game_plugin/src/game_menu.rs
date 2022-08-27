@@ -1,13 +1,13 @@
 use crate::game_menu::GuiLabel::GuiCreate;
 use crate::prelude::{
     aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBMaterial, Document,
-    FiniteSolver, SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
+    SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
 };
 use crate::{loading::FontAssets, GameState};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::cmp::max;
-
+use water_sim::{PreferredSolver, Solver};
 pub struct GuiStyle {
     pub button_normal_color: Color,
     pub button_hover_color: Color,
@@ -856,8 +856,7 @@ fn show_velocity_button(
     }
 }
 fn save_water(
-    button_materials: Res<ButtonMaterial>,
-    solver_query: Query<&FiniteSolver, With<FiniteSolver>>,
+    solver_query: Query<&PreferredSolver, With<PreferredSolver>>,
     mut query: Query<(&Interaction, &mut UiColor), (With<SaveWaterButton>, Changed<Interaction>)>,
 ) {
     for (interaction, mut mat) in query.iter_mut() {
@@ -883,7 +882,7 @@ fn add_box_button(
     button_materials: Res<ButtonMaterial>,
     aabb_material: Res<AABBMaterial>,
     mut meshes: ResMut<Assets<Mesh>>,
-    solver_query: Query<&FiniteSolver, ()>,
+    solver_query: Query<&PreferredSolver, ()>,
     mut queries: Query<(&Interaction, &mut UiColor), (Changed<Interaction>, With<AddBoxButton>)>,
 ) {
     for (interation, mut material) in queries.iter_mut() {
@@ -905,7 +904,7 @@ fn add_box_button(
                     &aabb_material,
                     &mut meshes,
                     mean_h,
-                    Vector2::new(water.h().x(), water.h().y()),
+                    Vector2::new(water.water_h().x(), water.water_h().y()),
                 );
                 *material = UiColor(GUI_STYLE.button_pressed_color);
             }
@@ -937,7 +936,7 @@ fn solve_info(
 }
 fn run_ui(
     mut _commands: Commands,
-    water_query: Query<&FiniteSolver, With<WaterMarker>>,
+    water_query: Query<&PreferredSolver, With<WaterMarker>>,
     mut query: Query<&mut Text, With<ViscocityChange>>,
 ) {
     let viscosity = water_query

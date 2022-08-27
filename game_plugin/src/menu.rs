@@ -1,10 +1,10 @@
 use crate::loading::FontAssets;
 use crate::prelude::{
-    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, CONDITIONS,
-    GUI_STYLE,
+    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, GUI_STYLE,
 };
 use crate::GameState;
 use bevy::prelude::*;
+use water_sim::{InitialConditions, PreferredSolver};
 
 pub struct MenuPlugin;
 #[derive(Component)]
@@ -15,6 +15,7 @@ struct MenuItem;
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ButtonMaterial>()
+            .add_startup_system(insert_conditions)
             .add_system_set(
                 SystemSet::on_enter(GameState::Menu)
                     .with_system(setup_menu)
@@ -38,11 +39,14 @@ pub struct SelectStartupInfo {
 }
 #[derive(Debug, Clone, Component)]
 struct SelectStartup;
-
+fn insert_conditions(mut commands: Commands) {
+    commands.insert_resource(water_sim::get_conditions::<PreferredSolver>())
+}
 fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     document: Res<Document>,
+    conditions: Res<Vec<InitialConditions<water_sim::PreferredSolver>>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
 ) {
@@ -70,7 +74,7 @@ fn setup_menu(
                 })
                 .insert(MenuItem)
                 .with_children(|parent| {
-                    for (index, startup) in (&CONDITIONS).iter().enumerate() {
+                    for (index, startup) in (&conditions).iter().enumerate() {
                         parent
                             .spawn_bundle(ButtonBundle {
                                 style: Style {
@@ -122,9 +126,7 @@ fn conditions_button(
         (Changed<Interaction>, With<Button>, With<SelectStartup>),
     >,
 ) {
-    info!("running conditions");
     for (interaction, mut material, select_info) in interaction_query.iter_mut() {
-        info!("running iteractions query");
         match *interaction {
             Interaction::Clicked => {
                 state.set(GameState::Playing).unwrap();
