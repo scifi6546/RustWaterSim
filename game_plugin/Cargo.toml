@@ -34,3 +34,4 @@ bevy_transform_gizmo = "0.3.1"
 bevy_mod_picking = "0.8.2"
 smooth-bevy-cameras={git = "https://github.com/bonsairobo/smooth-bevy-cameras", rev = "a1095b9bc563d459c79b59e12ef620fa4567e04e" }
 water_sim = {path = "../water_sim"}
+bevy_mod_raycast = "0.6.2"

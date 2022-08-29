@@ -5,6 +5,7 @@ use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
+use bevy_mod_raycast::RayCastMesh;
 pub use water_sim::{get_conditions, AABBBarrier, PreferredSolver, SolveInfo, Solver};
 pub mod aabb;
 use aabb::AABBMaterial;
@@ -13,7 +14,7 @@ mod uv_show;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
 pub const WATER_SIZE: f32 = 6.0;
-const HEIGHT_MULTIPLIER: f32 = 30.0;
+const HEIGHT_MULTIPLIER: f32 = 1.0;
 
 use nalgebra::{Vector2, Vector3};
 
@@ -36,7 +37,6 @@ impl Plugin for WaterPlugin {
         // build system set
         app.add_system_set(
             SystemSet::on_enter(GameState::Playing)
-                .after(CameraLabel)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(spawn_water_system)
                 .with_system(uv_show::build_uv_cubes),
@@ -44,7 +44,6 @@ impl Plugin for WaterPlugin {
         // update system set
         .add_system_set(
             SystemSet::on_update(GameState::Playing)
-                .after(CameraLabel)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(water_simulation)
                 .with_system(show_water)
@@ -54,7 +53,7 @@ impl Plugin for WaterPlugin {
     }
 }
 
-fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
+pub fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
     let mut position = vec![];
     let mut normals = vec![];
     let mut uvs = vec![];
@@ -166,6 +165,7 @@ fn spawn_water_system(
             ..Default::default()
         })
         .insert(GameEntity)
+        .insert(RayCastMesh::<GroundMarker>::default())
         .insert(GroundMarker);
 
     for barrier in barriers.drain(..) {
@@ -182,6 +182,10 @@ fn spawn_water_system(
 pub struct InitialConditions {
     pub name: &'static str,
     pub build_water_fn: fn() -> (PreferredSolver, Vec<AABBBarrier>),
+}
+pub fn get_water_position(requested_position: Vec3, water_transform: &Transform) -> Vec3 {
+    let global_pos = requested_position - water_transform.translation;
+    global_pos / water_transform.scale.x
 }
 fn water_simulation(
     _commands: Commands,

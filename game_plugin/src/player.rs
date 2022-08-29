@@ -1,9 +1,11 @@
-use crate::actions::Actions;
 use crate::GameState;
+use crate::{actions::Actions, prelude::GroundMarker, water::WaterMarker};
 use bevy::prelude::*;
 
+use crate::water::{build_mesh, get_water_position};
+use bevy_mod_raycast::{DefaultRaycastingPlugin, RayCastMethod, RayCastSource, RaycastSystem};
 use smooth_bevy_cameras::controllers::orbit::{OrbitCameraBundle, OrbitCameraController};
-
+use water_sim::{PreferredSolver, Solver};
 
 pub struct PlayerPlugin;
 
@@ -16,13 +18,27 @@ pub struct CameraLabel;
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(SystemSet::on_enter(GameState::Playing))
+        app.add_plugin(DefaultRaycastingPlugin::<GroundMarker>::default())
+            .add_system_set(SystemSet::on_enter(GameState::Playing))
             .add_startup_system(spawn_camera)
-            .add_system_set(SystemSet::on_update(GameState::Playing).with_system(move_player));
+            .add_system_set(
+                SystemSet::on_update(GameState::Playing)
+                    .with_system(move_player)
+                    .with_system(build_water)
+                    .with_system(update_raycast_cursor),
+            )
+            .add_system_to_stage(
+                CoreStage::First,
+                update_raycast_cursor.before(RaycastSystem::BuildRays::<GroundMarker>),
+            );
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, SystemLabel)]
+struct RayCastBuildLabel;
+#[derive(Component, Copy, Clone, Debug)]
+struct BrushCursorMarker;
 const SPAWN_RADIUS: f32 = 10.0;
-fn spawn_camera(mut commands: Commands) {
+fn spawn_camera(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     info!("spawining camera");
 
     let target = Vec3::new(3.0, 3.0, 3.0);
@@ -31,7 +47,8 @@ fn spawn_camera(mut commands: Commands) {
     let mouse_wheel_zoom_sensitivity = 0.02;
     #[cfg(target_family = "wasm")]
     let mouse_wheel_zoom_sensitivity = 0.002;
-    commands.spawn_bundle(Camera3dBundle::default())
+    commands
+        .spawn_bundle(Camera3dBundle::default())
         .insert_bundle(OrbitCameraBundle::new(
             OrbitCameraController {
                 mouse_translate_sensitivity: Vec2::splat(0.001),
@@ -41,6 +58,7 @@ fn spawn_camera(mut commands: Commands) {
             eye,
             target,
         ))
+        .insert(RayCastSource::<GroundMarker>::default())
         .insert(UiCameraConfig { show_ui: true })
         .insert_bundle(bevy_mod_picking::PickingCameraBundle::default())
         .insert(bevy_transform_gizmo::GizmoPickSource::default());
@@ -49,14 +67,67 @@ fn spawn_camera(mut commands: Commands) {
         ..Default::default()
     });
 }
-
-fn DEP_spawn_player(mut commands: Commands) {
-    commands.spawn_bundle(PointLightBundle {
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..Default::default()
-    });
+pub struct RayCastCursorLabel;
+fn update_raycast_cursor(
+    mut cursor: EventReader<CursorMoved>,
+    mut query: Query<&mut RayCastSource<GroundMarker>>,
+) {
+    let cursor_position = match cursor.iter().last() {
+        Some(cursor_moved) => cursor_moved.position,
+        None => return,
+    };
+    for mut pick_source in &mut query {
+        pick_source.cast_method = RayCastMethod::Screenspace(cursor_position);
+    }
 }
+fn build_water(
+    mouse_input: Res<Input<MouseButton>>,
+    mut mesh_assets: ResMut<Assets<Mesh>>,
+    ray_cast_iter: Query<&RayCastSource<GroundMarker>>,
+    mut ground_query: Query<&Handle<Mesh>, With<GroundMarker>>,
+    mut p_set: ParamSet<(
+        Query<(&Transform, &mut PreferredSolver), With<WaterMarker>>,
+        Query<(&mut Transform, &mut Visibility), With<BrushCursorMarker>>,
+    )>,
+) {
+    if !mouse_input.pressed(MouseButton::Left) {
+        return;
+    }
+    let intersect_position = ray_cast_iter
+        .iter()
+        .filter_map(|s| s.intersect_top())
+        .map(|(a, b)| b.position())
+        .next();
+    if let Some(pos) = intersect_position {
+        for (mut t, mut v) in p_set.p1().iter_mut() {
+            t.translation = pos;
+            v.is_visible = true;
+            if mouse_input.pressed(MouseButton::Left) {
+                t.scale = Vec3::new(0.8, 0.8, 0.8);
+            } else {
+                t.scale = Vec3::new(1.0, 1.0, 1.0);
+            }
+        }
+        for (trans, mut solver) in p_set.p0().iter_mut() {
+            let p = get_water_position(pos, trans);
+            let p_x = p.x as i32;
+            let p_y = p.z as i32;
+            let brush_radius = 10;
+            for x in p_x - brush_radius..p_x + brush_radius + 1 {
+                for y in p_y - brush_radius..p_y + brush_radius + 1 {
+                    if x < solver.dim_x() as i32 && x >= 0 && y < solver.dim_y() as i32 && y >= 0 {
+                        *solver.get_ground_mut(x as usize, y as usize) += 0.8;
+                    }
+                }
+            }
 
+            for ground_mesh in ground_query.iter_mut() {
+                build_mesh(solver.ground_h(), mesh_assets.get_mut(ground_mesh).unwrap())
+            }
+            info!("{}", p);
+        }
+    }
+}
 fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,

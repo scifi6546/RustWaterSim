@@ -1,4 +1,3 @@
-use crate::game_menu::GuiLabel::GuiCreate;
 use crate::prelude::{
     aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBMaterial, Document,
     SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
@@ -258,7 +257,7 @@ fn ui(
         &font_assets,
         &button_material,
         &document,
-        |materials, _, button_material, parent| {
+        |materials, _, parent| {
             // root node
             parent
                 .spawn_bundle(NodeBundle {
@@ -699,7 +698,6 @@ fn pause_button(
     };
 }
 fn leave_button(
-    button_materials: Res<ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
     mut queries: ParamSet<(
         Query<&Interaction, (With<Interaction>, Or<(With<LeaveButton>, With<LeaveText>)>)>,
@@ -736,7 +734,6 @@ fn leave_button(
 }
 
 fn play_button(
-    button_materials: Res<ButtonMaterial>,
     mut gui_state_query: Query<&mut GuiState, ()>,
     mut queries: ParamSet<(
         Query<

@@ -71,6 +71,16 @@ impl Solver for FiniteSolver {
     fn ground_h(&self) -> &Grid<f32> {
         &self.g_h
     }
+
+    fn get_ground_mut(&mut self, x: usize, y: usize) -> &mut f32 {
+        self.g_h.get_mut(x, y)
+    }
+    fn dim_x(&self) -> usize {
+        self.h.x()
+    }
+    fn dim_y(&self) -> usize {
+        self.h.y()
+    }
 }
 impl FiniteSolver {
     const DX: f32 = 999.0;

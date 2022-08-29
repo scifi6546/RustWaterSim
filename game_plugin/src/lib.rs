@@ -29,7 +29,8 @@ pub mod prelude {
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
-        AABBBarrier, InitialConditions, SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
+        get_water_position, AABBBarrier, GroundMarker, InitialConditions, SolveInfo, SolveInfoVec,
+        WaterMarker, WATER_SIZE,
     };
     pub use water_sim::get_conditions;
 }

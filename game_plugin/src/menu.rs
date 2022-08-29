@@ -56,7 +56,7 @@ fn setup_menu(
         &font_assets,
         &button_materials,
         &document,
-        |_, _, _, parent| {
+        |_, _, parent| {
             info!("building setup menu");
             info!("building based off of parent");
             parent
@@ -119,7 +119,6 @@ fn setup_menu(
 
 fn conditions_button(
     mut commands: Commands,
-    button_materials: Res<ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
     mut interaction_query: Query<
         (&Interaction, &mut UiColor, &SelectStartupInfo),

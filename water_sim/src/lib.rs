@@ -91,6 +91,9 @@ pub trait Solver {
     fn solve(&mut self, boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>);
     fn water_h(&self) -> &Grid<f32>;
     fn ground_h(&self) -> &Grid<f32>;
+    fn dim_x(&self) -> usize;
+    fn dim_y(&self) -> usize;
+    fn get_ground_mut(&mut self, x: usize, y: usize) -> &mut f32;
     fn offset_water(&self) -> Grid<f32> {
         self.water_h().clone() + self.ground_h().clone()
     }
@@ -226,6 +229,83 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                     Vector2::new(100, 100),
                 );
                 let g_h = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 100));
+
+                (T::new(h, g_h, Vec::new()), vec![])
+            },
+        },
+        InitialConditions {
+            name: "Droplet Dry",
+            build_water_fn: || {
+                let h = Grid::from_fn(
+                    |x, y| {
+                        let r = ((x as f32 - 50.0).powi(2) + (y as f32 - 50.0).powi(2)).sqrt();
+                        if r <= 10.0 {
+                            (10.0 - r) / 1.0
+                        } else {
+                            0.0
+                        }
+                    },
+                    Vector2::new(100, 100),
+                );
+                let g_h = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 100));
+
+                (T::new(h, g_h, Vec::new()), vec![])
+            },
+        },
+        InitialConditions {
+            name: "Island Tsunami",
+            build_water_fn: || {
+                let dimensions = Vector2::new(400, 400);
+                let center_x = 200.0f32;
+                let center_y = 200.0f32;
+                let bay_center_x = 140.0f32;
+                let bay_center_y = 200.0f32;
+
+                let water_level = 10.0;
+                let ground_fn = |x: usize, y: usize| {
+                    let r = ((x as f32 - center_x).powi(2) + (y as f32 - center_y).powi(2)).sqrt();
+                    let island = (-0.3 * r + 40.0).max(0.0);
+                    let bay_r = ((x as f32 - bay_center_x).powi(2)
+                        + (y as f32 - bay_center_y).powi(2))
+                    .sqrt();
+                    if bay_r < 40.0 {
+                        0.9 * water_level
+                    } else {
+                        island
+                    }
+                };
+
+                let g_h = Grid::from_fn(|x, y| ground_fn(x, y), dimensions);
+                let h = Grid::from_fn(
+                    |x, y| {
+                        (water_level - ground_fn(x, y)).max(0.0) + if x < 10 { 100.0 } else { 0.0 }
+                    },
+                    dimensions,
+                );
+
+                (T::new(h, g_h, Vec::new()), vec![])
+            },
+        },
+        InitialConditions {
+            name: "Tsunami",
+            build_water_fn: || {
+                fn ground_fn(x: usize, y: usize) -> f32 {
+                    if x < 200 {
+                        0.0
+                    } else if x < 300 {
+                        (x as f32 - 200.0) / 100.0
+                    } else {
+                        1.0
+                    }
+                }
+                let g_h = Grid::from_fn(|x, y| ground_fn(x, y), Vector2::new(400, 200));
+                let h = Grid::from_fn(
+                    |x, y| {
+                        let g = ground_fn(x, y);
+                        (1.0 - g).max(0.0) + if x <= 100 { 50.0 } else { 0.0 }
+                    },
+                    Vector2::new(400, 200),
+                );
 
                 (T::new(h, g_h, Vec::new()), vec![])
             },

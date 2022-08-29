@@ -14,7 +14,11 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(GamePlugin)
-        .insert_resource(bevy::winit::WinitSettings::game());
+        .insert_resource(bevy::winit::WinitSettings {
+            return_from_run: false,
+            focused_mode: bevy::winit::UpdateMode::Continuous,
+            unfocused_mode: bevy::winit::UpdateMode::Continuous,
+        });
 
     app.run();
 }

@@ -149,7 +149,7 @@ pub fn setup_page(
         &font_assets,
         &button_materials,
         &document,
-        |materials, _, buttom_materials, parent| {
+        |materials, _, parent| {
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {
