@@ -42,7 +42,9 @@ pub enum GameState {
     // During the loading State the LoadingPlugin will load our assets
     Loading,
     // During this State the actual game logic is executed
-    Playing,
+    Sandbox,
+    /// During this state a player is competing to finish a puzzle
+    Mission,
     // Here the menu is drawn and waiting for player interaction
     Menu,
     Page,

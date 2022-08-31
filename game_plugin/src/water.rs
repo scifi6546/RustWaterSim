@@ -36,14 +36,14 @@ impl Plugin for WaterPlugin {
         );
         // build system set
         app.add_system_set(
-            SystemSet::on_enter(GameState::Playing)
+            SystemSet::on_enter(GameState::Sandbox)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(spawn_water_system)
                 .with_system(uv_show::build_uv_cubes),
         )
         // update system set
         .add_system_set(
-            SystemSet::on_update(GameState::Playing)
+            SystemSet::on_update(GameState::Sandbox)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(water_simulation)
                 .with_system(show_water)

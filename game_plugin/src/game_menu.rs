@@ -121,20 +121,20 @@ impl Plugin for GameMenuPlugin {
         app.init_resource::<ButtonMaterial>();
         app.init_resource::<GuiState>();
         app.add_system_set(
-            SystemSet::on_enter(GameState::Playing)
+            SystemSet::on_enter(GameState::Sandbox)
                 .with_system(ui)
                 .label(GuiLabel::GuiCreate),
         );
-        app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(run_ui));
+        app.add_system_set(SystemSet::on_update(GameState::Sandbox).with_system(run_ui));
 
         app.add_system_set(
-            SystemSet::on_update(GameState::Playing).with_system(show_velocity_button),
+            SystemSet::on_update(GameState::Sandbox).with_system(show_velocity_button),
         )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(play_button))
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(pause_button));
-        app.add_system_set(SystemSet::on_update(GameState::Playing).with_system(solve_info))
+        .add_system_set(SystemSet::on_update(GameState::Sandbox).with_system(play_button))
+        .add_system_set(SystemSet::on_update(GameState::Sandbox).with_system(pause_button));
+        app.add_system_set(SystemSet::on_update(GameState::Sandbox).with_system(solve_info))
             .add_system_set(
-                SystemSet::on_update(GameState::Playing)
+                SystemSet::on_update(GameState::Sandbox)
                     .with_system(show_speed)
                     .with_system(solve_info)
                     .with_system(leave_button)
@@ -142,7 +142,7 @@ impl Plugin for GameMenuPlugin {
                     .with_system(add_box_button),
             )
             .add_system_set(
-                SystemSet::on_exit(GameState::Playing)
+                SystemSet::on_exit(GameState::Sandbox)
                     .with_system(despawn_gui)
                     .with_system(cleanup_ui),
             );

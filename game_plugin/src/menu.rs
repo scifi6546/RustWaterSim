@@ -59,6 +59,13 @@ fn setup_menu(
         |_, _, parent| {
             info!("building setup menu");
             info!("building based off of parent");
+            parent.spawn_bundle(NodeBundle {
+                style: Style {
+                    ..Default::default()
+                },
+                color: UiColor(GUI_STYLE.main_menu_bg_color),
+                ..Default::default()
+            });
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {
@@ -128,7 +135,7 @@ fn conditions_button(
     for (interaction, mut material, select_info) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
-                state.set(GameState::Playing).unwrap();
+                state.set(GameState::Sandbox).unwrap();
                 commands.insert_resource(select_info.clone());
             }
             Interaction::Hovered => {

@@ -20,7 +20,7 @@ impl Plugin for DocumentPlugin {
         );
 
         app.add_system_set(
-            SystemSet::on_update(GameState::Playing)
+            SystemSet::on_update(GameState::Sandbox)
                 .with_system(nav_system)
                 .with_system(page::button),
         );

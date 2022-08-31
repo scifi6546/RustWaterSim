@@ -19,10 +19,10 @@ pub struct CameraLabel;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(DefaultRaycastingPlugin::<GroundMarker>::default())
-            .add_system_set(SystemSet::on_enter(GameState::Playing))
+            .add_system_set(SystemSet::on_enter(GameState::Sandbox))
             .add_startup_system(spawn_camera)
             .add_system_set(
-                SystemSet::on_update(GameState::Playing)
+                SystemSet::on_update(GameState::Sandbox)
                     .with_system(move_player)
                     .with_system(build_water)
                     .with_system(update_raycast_cursor),
