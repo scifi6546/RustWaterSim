@@ -59,8 +59,9 @@ pub fn build_gui(
     font_assets: &Res<FontAssets>,
     button_material: &Res<ButtonMaterial>,
     document: &Res<Document>,
+    asset_server: &Res<AssetServer>,
 
-    f: impl FnOnce(&Res<FontAssets>, &mut ChildBuilder<'_, '_, '_>),
+    f: impl FnOnce(&Res<FontAssets>, &Res<AssetServer>, &mut ChildBuilder<'_, '_, '_>),
 ) {
     commands
         .spawn_bundle(NodeBundle {
@@ -106,7 +107,7 @@ pub fn build_gui(
                 })
                 .insert(GuiParent)
                 .with_children(|parent| {
-                    f(font_assets, parent);
+                    f(font_assets, asset_server, parent);
                 });
         });
 }

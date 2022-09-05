@@ -110,7 +110,7 @@ pub const GUI_STYLE: GuiStyle = GuiStyle {
     },
 };
 #[derive(Component)]
-struct GameMenu;
+pub struct GameMenu;
 pub struct GameMenuPlugin;
 #[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
 enum GuiLabel {
@@ -150,7 +150,7 @@ impl Plugin for GameMenuPlugin {
 }
 /// Marks viscocoty change text button
 #[derive(Component)]
-struct ViscocityChange;
+pub struct ViscocityChange;
 #[derive(Component)]
 pub struct SolveInfoLabel;
 
@@ -191,7 +191,7 @@ impl FromWorld for ButtonMaterial {
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SpeedDirection {
+pub enum SpeedDirection {
     Increasing,
     Decreasing,
 }
@@ -201,7 +201,7 @@ pub struct GuiState {
     pub show_water: bool,
     pub water_speed: u32,
     /// whether or not to increase speed when play button is clicked
-    speed_direction: SpeedDirection,
+    pub speed_direction: SpeedDirection,
 }
 impl Default for GuiState {
     fn default() -> Self {
@@ -213,7 +213,7 @@ impl Default for GuiState {
         }
     }
 }
-const MAX_WATER_SPEED: u32 = 64;
+pub const MAX_WATER_SPEED: u32 = 64;
 /// Marker for play button
 #[derive(Component)]
 pub struct PlayButton;
@@ -226,7 +226,7 @@ pub struct PlayTexture;
 #[derive(Component)]
 pub struct ShowSpeed;
 #[derive(Component)]
-struct AddBoxButton;
+pub struct AddBoxButton;
 /// Marks Show Velocities button
 #[derive(Component)]
 pub struct ShowVelocities;
@@ -236,9 +236,9 @@ pub struct ShowWater;
 #[derive(Component)]
 pub struct LeaveButton;
 #[derive(Component)]
-struct LeaveText;
+pub struct LeaveText;
 #[derive(Component)]
-struct SaveWaterButton;
+pub struct SaveWaterButton;
 /// marks that belongs to game::playing state. will be destroyed at end of this state
 #[derive(Component)]
 pub struct GameEntity;
@@ -257,7 +257,8 @@ fn ui(
         &font_assets,
         &button_material,
         &document,
-        |materials, parent| {
+        &asset_server,
+        |materials, _, parent| {
             // root node
             parent
                 .spawn_bundle(NodeBundle {

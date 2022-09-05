@@ -49,6 +49,7 @@ fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     document: Res<Document>,
+    asset_server: Res<AssetServer>,
     conditions: Res<Vec<InitialConditions<water_sim::PreferredSolver>>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     button_materials: Res<ButtonMaterial>,
@@ -59,7 +60,8 @@ fn setup_menu(
         &font_assets,
         &button_materials,
         &document,
-        |_, parent| {
+        &asset_server,
+        |_, _, parent| {
             info!("building setup menu");
             info!("building based off of parent");
             parent

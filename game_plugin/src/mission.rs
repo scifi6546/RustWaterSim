@@ -1,15 +1,24 @@
 mod gui;
 
-use crate::prelude::build_water_mesh;
-use crate::{prelude::AABBMaterial, GameState};
+use crate::prelude::{
+    build_water_mesh, AABBMaterial, GameState, GuiRunner, WaterPlugin, WaterRunPlugin, GUI_STYLE,
+};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use water_sim::{Grid, PreferredSolver, Solver};
 
 pub struct MissionPlugin;
+#[derive(Component)]
+pub struct DebugWin;
 impl Plugin for MissionPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system_set(
+        app.add_plugin(GuiRunner {
+            active_state: GameState::Mission,
+        })
+        .add_plugin(WaterRunPlugin {
+            active_state: GameState::Mission,
+        })
+        .add_system_set(
             SystemSet::on_enter(GameState::Mission)
                 .with_system(gui::build_gui)
                 .with_system(build_water),
@@ -21,7 +30,13 @@ impl Plugin for MissionPlugin {
         );
     }
 }
-fn win_condition(water_query: Query<&PreferredSolver, ()>) {
+fn win_condition(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    water_query: Query<&PreferredSolver, ()>,
+    mut text: Query<&mut Text, With<DebugWin>>,
+) {
+    const LOOSE_VOL: f32 = 100.0;
     for water in water_query.iter() {
         let water_height = water.water_h();
         let max_vol = 10.0;
@@ -29,6 +44,21 @@ fn win_condition(water_query: Query<&PreferredSolver, ()>) {
             .flat_map(|x| (0..50).map(move |y| water_height.get(x, y)))
             .fold(0.0, |acc, x| acc + x);
         info!("vol: {}", vol);
+        let write_text = if vol < LOOSE_VOL {
+            format!("volume of water in town:\n{}", vol)
+        } else {
+            format!("lost!!")
+        };
+        for mut t in text.iter_mut() {
+            t.sections = vec![TextSection::new(
+                write_text.clone(),
+                TextStyle {
+                    font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                    font_size: 30.0,
+                    color: GUI_STYLE.button_text_color,
+                },
+            )];
+        }
         if vol >= max_vol {
             info!("lost!!!")
         }
@@ -38,6 +68,7 @@ fn build_water(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     aabb_material: Res<AABBMaterial>,
+    asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     fn ground(x: usize, y: usize) -> f32 {
@@ -53,7 +84,7 @@ fn build_water(
         Grid::from_fn(
             |x, y| {
                 if x < 20 {
-                    10.0
+                    20.0
                 } else {
                     (8.0 - ground(x, y)).max(0.0)
                 }
@@ -63,6 +94,16 @@ fn build_water(
         Grid::from_fn(|x, y| ground(x, y), Vector2::new(100, 100)),
         Vec::new(),
     );
+    commands
+        .spawn_bundle(TextBundle::from_section(
+            "",
+            TextStyle {
+                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                font_size: 30.0,
+                color: GUI_STYLE.button_text_color,
+            },
+        ))
+        .insert(DebugWin);
     build_water_mesh(
         water,
         Vec::new(),

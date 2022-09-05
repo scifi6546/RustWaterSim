@@ -26,7 +26,9 @@ pub enum WaterLabel {
 pub struct SolveInfoVec {
     pub data: Vec<SolveInfo>,
 }
-pub struct WaterPlugin;
+pub struct WaterPlugin {
+    pub active_state: GameState,
+}
 impl Plugin for WaterPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
@@ -36,14 +38,24 @@ impl Plugin for WaterPlugin {
         );
         // build system set
         app.add_system_set(
-            SystemSet::on_enter(GameState::Sandbox)
+            SystemSet::on_enter(self.active_state)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(uv_show::build_uv_cubes)
                 .with_system(spawn_water_system),
         )
         // update system set
-        .add_system_set(
-            SystemSet::on_update(GameState::Sandbox)
+        .add_plugin(WaterRunPlugin {
+            active_state: self.active_state,
+        });
+    }
+}
+pub struct WaterRunPlugin {
+    pub active_state: GameState,
+}
+impl Plugin for WaterRunPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system_set(
+            SystemSet::on_update(self.active_state)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(water_simulation)
                 .with_system(show_water)
@@ -52,7 +64,6 @@ impl Plugin for WaterPlugin {
         );
     }
 }
-
 pub fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
     let mut position = vec![];
     let mut normals = vec![];
@@ -210,7 +221,7 @@ pub fn get_water_position(requested_position: Vec3, water_transform: &Transform)
 fn water_simulation(
     _commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
-    gui_query: Query<&GuiState, With<GuiState>>,
+    gui_state: Res<GuiState>,
     mut water_query: Query<
         (
             &mut Transform,
@@ -222,11 +233,6 @@ fn water_simulation(
     >,
     aabb_query: Query<&AABBBarrier, ()>,
 ) {
-    let gui_state = gui_query.iter().next();
-    if gui_state.is_none() {
-        return;
-    }
-    let gui_state = gui_state.unwrap();
     if gui_state.water_speed == 0 {
         return;
     }
@@ -250,14 +256,11 @@ fn show_water(
         (&mut Transform, &mut Visibility, &mut PreferredSolver),
         With<WaterMarker>,
     >,
-    gui_query: Query<&GuiState, Changed<GuiState>>,
+    gui_state: Res<GuiState>,
 ) {
-    let gui_state = gui_query.iter().next();
-    if gui_state.is_none() {
-        return;
-    }
-    let gui_state = gui_state.unwrap();
     for (_t, mut visible, _solver) in water_query.iter_mut() {
-        visible.is_visible = gui_state.show_water;
+        if visible.is_visible != gui_state.show_water {
+            visible.is_visible = gui_state.show_water;
+        }
     }
 }

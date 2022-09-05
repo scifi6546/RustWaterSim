@@ -24,10 +24,12 @@ use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPl
 use water::WaterPlugin;
 pub mod prelude {
     pub use super::game_menu::{
-        ButtonMaterial, GameEntity, GuiState, GuiStyle, ShowVelocities, ShowWater, SolveInfoLabel,
-        GUI_STYLE,
+        AddBoxButton, ButtonMaterial, GameEntity, GameMenu, GuiState, GuiStyle, LeaveButton,
+        LeaveText, PauseButton, PauseTexture, PlayButton, PlayTexture, SaveWaterButton, ShowSpeed,
+        ShowVelocities, ShowWater, SolveInfoLabel, SpeedDirection, ViscocityChange, GUI_STYLE,
+        MAX_WATER_SPEED,
     };
-    pub use super::gui::build_playbar;
+    pub use super::gui::{build_play_menu, GuiRunner};
     pub use super::loading::FontAssets;
     pub use super::markdown::{
         build_gui, despawn_gui, nav_system, BuiltParentLabel, Document, DocumentGuiParent,
@@ -38,14 +40,15 @@ pub mod prelude {
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
         build_water_mesh, get_water_position, AABBBarrier, GroundMarker, InitialConditions,
-        SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
+        SolveInfo, SolveInfoVec, WaterMarker, WaterPlugin, WaterRunPlugin, WATER_SIZE,
     };
+    pub use super::GameState;
     pub use water_sim::get_conditions;
 }
 // This example game uses States to separate logic
 // See https://bevy-cheatbook.github.io/programming/states.html
 // Or https://github.com/bevyengine/bevy/blob/main/examples/ecs/state.rs
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
 pub enum GameState {
     // During the loading State the LoadingPlugin will load our assets
     Loading,
@@ -76,7 +79,9 @@ impl Plugin for GamePlugin {
             .add_plugin(OrbitCameraPlugin {
                 override_input_system: false,
             })
-            .add_plugin(WaterPlugin)
+            .add_plugin(WaterPlugin {
+                active_state: GameState::Sandbox,
+            })
             .add_plugin(GameMenuPlugin)
             .add_plugin(PlayerPlugin);
 
