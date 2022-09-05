@@ -152,7 +152,7 @@ impl Plugin for GameMenuPlugin {
 #[derive(Component)]
 struct ViscocityChange;
 #[derive(Component)]
-struct SolveInfoLabel;
+pub struct SolveInfoLabel;
 
 pub struct ButtonMaterial {
     pub normal: Handle<ColorMaterial>,
@@ -216,25 +216,25 @@ impl Default for GuiState {
 const MAX_WATER_SPEED: u32 = 64;
 /// Marker for play button
 #[derive(Component)]
-struct PlayButton;
+pub struct PlayButton;
 #[derive(Component)]
-struct PauseButton;
+pub struct PauseButton;
 #[derive(Component)]
-struct PauseTexture;
+pub struct PauseTexture;
 #[derive(Component)]
-struct PlayTexture;
+pub struct PlayTexture;
 #[derive(Component)]
-struct ShowSpeed;
+pub struct ShowSpeed;
 #[derive(Component)]
 struct AddBoxButton;
 /// Marks Show Velocities button
 #[derive(Component)]
-struct ShowVelocities;
+pub struct ShowVelocities;
 /// Marks show water
 #[derive(Component)]
-struct ShowWater;
+pub struct ShowWater;
 #[derive(Component)]
-struct LeaveButton;
+pub struct LeaveButton;
 #[derive(Component)]
 struct LeaveText;
 #[derive(Component)]
@@ -257,7 +257,7 @@ fn ui(
         &font_assets,
         &button_material,
         &document,
-        |materials, _, parent| {
+        |materials, parent| {
             // root node
             parent
                 .spawn_bundle(NodeBundle {
@@ -876,7 +876,7 @@ fn save_water(
 }
 fn add_box_button(
     mut commands: Commands,
-    button_materials: Res<ButtonMaterial>,
+
     aabb_material: Res<AABBMaterial>,
     mut meshes: ResMut<Assets<Mesh>>,
     solver_query: Query<&PreferredSolver, ()>,

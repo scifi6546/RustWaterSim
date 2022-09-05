@@ -60,7 +60,7 @@ pub fn build_gui(
     button_material: &Res<ButtonMaterial>,
     document: &Res<Document>,
 
-    f: impl FnOnce(&mut ResMut<Assets<ColorMaterial>>, &Res<FontAssets>, &mut ChildBuilder<'_, '_, '_>),
+    f: impl FnOnce(&Res<FontAssets>, &mut ChildBuilder<'_, '_, '_>),
 ) {
     commands
         .spawn_bundle(NodeBundle {
@@ -83,7 +83,7 @@ pub fn build_gui(
         })
         .insert(RootNode)
         .with_children(|parent| {
-            build_navbar(parent, &font_assets, document, &button_material);
+            build_navbar(parent, &font_assets, document);
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {
@@ -106,7 +106,7 @@ pub fn build_gui(
                 })
                 .insert(GuiParent)
                 .with_children(|parent| {
-                    f(materials, font_assets, parent);
+                    f(font_assets, parent);
                 });
         });
 }
@@ -115,7 +115,6 @@ fn build_navbar<'a>(
     parent: &mut ChildBuilder<'_, '_, '_>,
     font_assets: &Res<FontAssets>,
     document: &Res<Document>,
-    materials: &ButtonMaterial,
 ) {
     parent
         .spawn_bundle(NodeBundle {

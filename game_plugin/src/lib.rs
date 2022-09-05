@@ -1,12 +1,15 @@
 mod actions;
 mod file_save;
 mod game_menu;
+mod gui;
 mod input;
 mod loading;
 mod markdown;
 mod menu;
+mod mission;
 mod player;
 mod water;
+
 use crate::actions::ActionsPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
@@ -20,7 +23,12 @@ use game_menu::GameMenuPlugin;
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
 pub mod prelude {
-    pub use super::game_menu::{ButtonMaterial, GameEntity, GuiState, GuiStyle, GUI_STYLE};
+    pub use super::game_menu::{
+        ButtonMaterial, GameEntity, GuiState, GuiStyle, ShowVelocities, ShowWater, SolveInfoLabel,
+        GUI_STYLE,
+    };
+    pub use super::gui::build_playbar;
+    pub use super::loading::FontAssets;
     pub use super::markdown::{
         build_gui, despawn_gui, nav_system, BuiltParentLabel, Document, DocumentGuiParent,
         GuiParent,
@@ -29,8 +37,8 @@ pub mod prelude {
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
-        get_water_position, AABBBarrier, GroundMarker, InitialConditions, SolveInfo, SolveInfoVec,
-        WaterMarker, WATER_SIZE,
+        build_water_mesh, get_water_position, AABBBarrier, GroundMarker, InitialConditions,
+        SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
     };
     pub use water_sim::get_conditions;
 }
@@ -64,6 +72,7 @@ impl Plugin for GamePlugin {
             .add_plugin(input::CameraInput)
             .add_plugin(markdown::DocumentPlugin)
             .add_plugin(LookTransformPlugin)
+            .add_plugin(mission::MissionPlugin)
             .add_plugin(OrbitCameraPlugin {
                 override_input_system: false,
             })

@@ -38,8 +38,8 @@ impl Plugin for WaterPlugin {
         app.add_system_set(
             SystemSet::on_enter(GameState::Sandbox)
                 .after(WaterLabel::InsertAABBMaterial)
-                .with_system(spawn_water_system)
-                .with_system(uv_show::build_uv_cubes),
+                .with_system(uv_show::build_uv_cubes)
+                .with_system(spawn_water_system),
         )
         // update system set
         .add_system_set(
@@ -124,16 +124,22 @@ pub fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
 pub struct WaterMarker;
 #[derive(Component)]
 pub struct GroundMarker;
-fn spawn_water_system(
+fn load_scenario(startup_info: Res<SelectStartupInfo>) -> (PreferredSolver, Vec<AABBBarrier>) {
+    let conditions = get_conditions::<PreferredSolver>();
+    let water_fn = conditions[startup_info.index].build_water_fn;
+    let o = water_fn();
+    (0);
+    o
+}
+
+pub fn build_water_mesh(
+    water: PreferredSolver,
+    mut barriers: Vec<AABBBarrier>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     aabb_material: Res<AABBMaterial>,
-    startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let conditions = get_conditions::<PreferredSolver>();
-    let water_fn = conditions[startup_info.index].build_water_fn;
-    let (water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.water_h().x() as f32;
 
@@ -156,18 +162,19 @@ fn spawn_water_system(
         .insert(water)
         .insert(SolveInfoVec { data: info })
         .insert(GameEntity)
-        .insert(WaterMarker);
-    commands
-        .spawn_bundle(PbrBundle {
-            material: materials.add(Color::rgb(0.8, 0.25, 0.7).into()),
-            transform: transform,
-            mesh: meshes.add(ground_mesh),
-            ..Default::default()
-        })
-        .insert(GameEntity)
-        .insert(RayCastMesh::<GroundMarker>::default())
-        .insert(GroundMarker);
-
+        .insert(WaterMarker)
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(PbrBundle {
+                    material: materials.add(Color::rgb(0.8, 0.25, 0.7).into()),
+                    transform: Transform::default(),
+                    mesh: meshes.add(ground_mesh),
+                    ..Default::default()
+                })
+                .insert(GameEntity)
+                .insert(RayCastMesh::<GroundMarker>::default())
+                .insert(GroundMarker);
+        });
     for barrier in barriers.drain(..) {
         aabb::build_barrier(
             &mut commands,
@@ -175,9 +182,22 @@ fn spawn_water_system(
             &aabb_material,
             &mut meshes,
             mean_h,
-            water_dimensions,
+            water_dimensions.clone(),
         );
     }
+}
+fn spawn_water_system(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    aabb_material: Res<AABBMaterial>,
+    startup_info: Res<SelectStartupInfo>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let conditions = get_conditions::<PreferredSolver>();
+    let water_fn = conditions[startup_info.index].build_water_fn;
+    let (water, mut barriers) = water_fn();
+
+    build_water_mesh(water, barriers, commands, meshes, aabb_material, materials);
 }
 pub struct InitialConditions {
     pub name: &'static str,

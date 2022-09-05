@@ -24,7 +24,7 @@ impl Plugin for PlayerPlugin {
             .add_system_set(
                 SystemSet::on_update(GameState::Sandbox)
                     .with_system(move_player)
-                    .with_system(build_water)
+                    .with_system(build_ground_system)
                     .with_system(update_raycast_cursor),
             )
             .add_system_to_stage(
@@ -34,9 +34,9 @@ impl Plugin for PlayerPlugin {
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, SystemLabel)]
-struct RayCastBuildLabel;
+pub struct RayCastBuildLabel;
 #[derive(Component, Copy, Clone, Debug)]
-struct BrushCursorMarker;
+pub struct BrushCursorMarker;
 const SPAWN_RADIUS: f32 = 10.0;
 fn spawn_camera(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     info!("spawining camera");
@@ -80,7 +80,8 @@ fn update_raycast_cursor(
         pick_source.cast_method = RayCastMethod::Screenspace(cursor_position);
     }
 }
-fn build_water(
+/// system that handles player ground brush
+pub fn build_ground_system(
     mouse_input: Res<Input<MouseButton>>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     ray_cast_iter: Query<&RayCastSource<GroundMarker>>,
