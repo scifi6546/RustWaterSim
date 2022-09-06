@@ -1,6 +1,7 @@
 use crate::loading::FontAssets;
 use crate::prelude::{
-    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, GUI_STYLE,
+    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document,
+    MissionScenario, GUI_STYLE,
 };
 use crate::GameState;
 use bevy::prelude::*;
@@ -49,6 +50,7 @@ fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     document: Res<Document>,
+    missions: Res<Vec<std::sync::Mutex<Box<dyn MissionScenario>>>>,
     asset_server: Res<AssetServer>,
     conditions: Res<Vec<InitialConditions<water_sim::PreferredSolver>>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -101,6 +103,7 @@ fn setup_menu(
                                     ..Default::default()
                                 })
                                 .insert(MenuItem);
+
                             parent
                                 .spawn_bundle(ButtonBundle {
                                     style: Style {
@@ -116,6 +119,24 @@ fn setup_menu(
                                 .insert(MenuItem)
                                 .insert(MissionButton)
                                 .with_children(|parent| {
+                                    for mission in missions.iter() {
+                                        parent
+                                            .spawn_bundle(TextBundle {
+                                                text: Text {
+                                                    sections: vec![TextSection {
+                                                        value: mission.name(),
+                                                        style: TextStyle {
+                                                            font: font_assets.fira_sans.clone(),
+                                                            font_size: 40.0,
+                                                            color: GUI_STYLE.button_text_color,
+                                                        },
+                                                    }],
+                                                    alignment: Default::default(),
+                                                },
+                                                ..Default::default()
+                                            })
+                                            .insert(MenuItem);
+                                    }
                                     parent
                                         .spawn_bundle(TextBundle {
                                             text: Text {

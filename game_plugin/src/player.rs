@@ -117,7 +117,9 @@ pub fn build_ground_system(
             for x in p_x - brush_radius..p_x + brush_radius + 1 {
                 for y in p_y - brush_radius..p_y + brush_radius + 1 {
                     if x < solver.dim_x() as i32 && x >= 0 && y < solver.dim_y() as i32 && y >= 0 {
-                        *solver.get_ground_mut(x as usize, y as usize) += 0.8;
+                        let r = ((x as f32 - p.x).powi(2) + (y as f32 - p.z).powi(2)).sqrt();
+                        let incr = (1.0 - r / brush_radius as f32).max(0.0);
+                        *solver.get_ground_mut(x as usize, y as usize) += 0.8 * incr;
                     }
                 }
             }

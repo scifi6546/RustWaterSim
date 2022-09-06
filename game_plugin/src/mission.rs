@@ -1,15 +1,14 @@
 mod gui;
 
 use crate::prelude::{
-    build_water_mesh, AABBMaterial, GameState, GuiRunner, WaterPlugin, WaterRunPlugin, GUI_STYLE,
+    build_water_mesh, AABBMaterial, GameEntity, GameState, GuiRunner, WaterPlugin, WaterRunPlugin,
+    GUI_STYLE,
 };
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use water_sim::{Grid, PreferredSolver, Solver};
 
 pub struct MissionPlugin;
-#[derive(Component)]
-pub struct DebugWin;
 impl Plugin for MissionPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(GuiRunner {
@@ -23,6 +22,7 @@ impl Plugin for MissionPlugin {
                 .with_system(gui::build_gui)
                 .with_system(build_water),
         )
+        .add_system_set(SystemSet::on_enter(GameState::Loading).with_system(insert_mission))
         .add_system_set(
             SystemSet::on_update(GameState::Mission)
                 .with_system(crate::player::build_ground_system)
@@ -30,6 +30,60 @@ impl Plugin for MissionPlugin {
         );
     }
 }
+pub trait MissionScenario: Send {
+    fn get_solver(&self) -> PreferredSolver;
+    fn name(&self) -> String;
+    fn get_lost(&self, solver: &PreferredSolver) -> bool;
+}
+unsafe impl Send for Box<dyn MissionScenario> {}
+pub fn get_missions() -> Vec<Box<dyn MissionScenario>> {
+    vec![Box::new(TsunamiScenario {})]
+}
+fn insert_mission(mut commands: Commands) {
+    commands.insert_resource(get_missions())
+}
+struct TsunamiScenario {}
+impl MissionScenario for TsunamiScenario {
+    fn get_solver(&self) -> PreferredSolver {
+        fn ground(x: usize, y: usize) -> f32 {
+            if x < 60 {
+                0.0
+            } else if x <= 80 {
+                10.0 * (x as f32 - 60.0) / 20.0
+            } else {
+                10.0
+            }
+        }
+        PreferredSolver::new(
+            Grid::from_fn(
+                |x, y| {
+                    if x < 20 {
+                        20.0
+                    } else {
+                        (8.0 - ground(x, y)).max(0.0)
+                    }
+                },
+                Vector2::new(100, 100),
+            ),
+            Grid::from_fn(|x, y| ground(x, y), Vector2::new(100, 100)),
+            Vec::new(),
+        )
+    }
+    fn name(&self) -> String {
+        "Tsunami".to_string()
+    }
+    fn get_lost(&self, solver: &PreferredSolver) -> bool {
+        let loose_vol = 100.0f32;
+        let water_height = solver.water_h();
+        let vol = (90..100)
+            .flat_map(|x| (0..50).map(move |y| water_height.get(x, y)))
+            .fold(0.0, |acc, x| acc + x);
+        loose_vol < vol
+    }
+}
+#[derive(Component)]
+pub struct DebugWin;
+
 fn win_condition(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
@@ -103,6 +157,7 @@ fn build_water(
                 color: GUI_STYLE.button_text_color,
             },
         ))
+        .insert(GameEntity)
         .insert(DebugWin);
     build_water_mesh(
         water,

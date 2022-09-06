@@ -8,6 +8,7 @@ mod markdown;
 mod menu;
 mod mission;
 mod player;
+mod sandbox;
 mod water;
 
 use crate::actions::ActionsPlugin;
@@ -19,7 +20,7 @@ use crate::player::PlayerPlugin;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use bevy::winit;
-use game_menu::GameMenuPlugin;
+
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
 pub mod prelude {
@@ -36,6 +37,7 @@ pub mod prelude {
         GuiParent,
     };
     pub use super::menu::SelectStartupInfo;
+    pub use super::mission::MissionScenario;
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
@@ -76,13 +78,13 @@ impl Plugin for GamePlugin {
             .add_plugin(markdown::DocumentPlugin)
             .add_plugin(LookTransformPlugin)
             .add_plugin(mission::MissionPlugin)
+            .add_plugin(sandbox::SandboxPlugin)
             .add_plugin(OrbitCameraPlugin {
                 override_input_system: false,
             })
             .add_plugin(WaterPlugin {
                 active_state: GameState::Sandbox,
             })
-            .add_plugin(GameMenuPlugin)
             .add_plugin(PlayerPlugin);
 
         #[cfg(debug_assertions)]
