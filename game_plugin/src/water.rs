@@ -26,7 +26,9 @@ pub enum WaterLabel {
 pub struct SolveInfoVec {
     pub data: Vec<SolveInfo>,
 }
-pub struct WaterPlugin;
+pub struct WaterPlugin {
+    pub active_state: GameState,
+}
 impl Plugin for WaterPlugin {
     fn build(&self, app: &mut App) {
         app.add_system_set(
@@ -36,14 +38,24 @@ impl Plugin for WaterPlugin {
         );
         // build system set
         app.add_system_set(
-            SystemSet::on_enter(GameState::Playing)
+            SystemSet::on_enter(self.active_state)
                 .after(WaterLabel::InsertAABBMaterial)
-                .with_system(spawn_water_system)
-                .with_system(uv_show::build_uv_cubes),
+                .with_system(uv_show::build_uv_cubes)
+                .with_system(spawn_water_system),
         )
         // update system set
-        .add_system_set(
-            SystemSet::on_update(GameState::Playing)
+        .add_plugin(WaterRunPlugin {
+            active_state: self.active_state,
+        });
+    }
+}
+pub struct WaterRunPlugin {
+    pub active_state: GameState,
+}
+impl Plugin for WaterRunPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system_set(
+            SystemSet::on_update(self.active_state)
                 .after(WaterLabel::InsertAABBMaterial)
                 .with_system(water_simulation)
                 .with_system(show_water)
@@ -52,7 +64,6 @@ impl Plugin for WaterPlugin {
         );
     }
 }
-
 pub fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
     let mut position = vec![];
     let mut normals = vec![];
@@ -124,16 +135,22 @@ pub fn build_mesh(water: &water_sim::Grid<f32>, mesh: &mut Mesh) {
 pub struct WaterMarker;
 #[derive(Component)]
 pub struct GroundMarker;
-fn spawn_water_system(
+fn load_scenario(startup_info: Res<SelectStartupInfo>) -> (PreferredSolver, Vec<AABBBarrier>) {
+    let conditions = get_conditions::<PreferredSolver>();
+    let water_fn = conditions[startup_info.index].build_water_fn;
+    let o = water_fn();
+    (0);
+    o
+}
+
+pub fn build_water_mesh(
+    water: PreferredSolver,
+    mut barriers: Vec<AABBBarrier>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     aabb_material: Res<AABBMaterial>,
-    startup_info: Res<SelectStartupInfo>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let conditions = get_conditions::<PreferredSolver>();
-    let water_fn = conditions[startup_info.index].build_water_fn;
-    let (water, mut barriers) = water_fn();
     let mut transform = Transform::from_translation(Vec3::new(0.0, 0.0, 0.0));
     let scale = WATER_SIZE / water.water_h().x() as f32;
 
@@ -156,18 +173,19 @@ fn spawn_water_system(
         .insert(water)
         .insert(SolveInfoVec { data: info })
         .insert(GameEntity)
-        .insert(WaterMarker);
-    commands
-        .spawn_bundle(PbrBundle {
-            material: materials.add(Color::rgb(0.8, 0.25, 0.7).into()),
-            transform: transform,
-            mesh: meshes.add(ground_mesh),
-            ..Default::default()
-        })
-        .insert(GameEntity)
-        .insert(RayCastMesh::<GroundMarker>::default())
-        .insert(GroundMarker);
-
+        .insert(WaterMarker)
+        .with_children(|parent| {
+            parent
+                .spawn_bundle(PbrBundle {
+                    material: materials.add(Color::rgb(0.8, 0.25, 0.7).into()),
+                    transform: Transform::default(),
+                    mesh: meshes.add(ground_mesh),
+                    ..Default::default()
+                })
+                .insert(GameEntity)
+                .insert(RayCastMesh::<GroundMarker>::default())
+                .insert(GroundMarker);
+        });
     for barrier in barriers.drain(..) {
         aabb::build_barrier(
             &mut commands,
@@ -175,9 +193,22 @@ fn spawn_water_system(
             &aabb_material,
             &mut meshes,
             mean_h,
-            water_dimensions,
+            water_dimensions.clone(),
         );
     }
+}
+fn spawn_water_system(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    aabb_material: Res<AABBMaterial>,
+    startup_info: Res<SelectStartupInfo>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let conditions = get_conditions::<PreferredSolver>();
+    let water_fn = conditions[startup_info.index].build_water_fn;
+    let (water, mut barriers) = water_fn();
+
+    build_water_mesh(water, barriers, commands, meshes, aabb_material, materials);
 }
 pub struct InitialConditions {
     pub name: &'static str,
@@ -190,7 +221,7 @@ pub fn get_water_position(requested_position: Vec3, water_transform: &Transform)
 fn water_simulation(
     _commands: Commands,
     mut mesh_assets: ResMut<Assets<Mesh>>,
-    gui_query: Query<&GuiState, With<GuiState>>,
+    gui_state: Res<GuiState>,
     mut water_query: Query<
         (
             &mut Transform,
@@ -202,11 +233,6 @@ fn water_simulation(
     >,
     aabb_query: Query<&AABBBarrier, ()>,
 ) {
-    let gui_state = gui_query.iter().next();
-    if gui_state.is_none() {
-        return;
-    }
-    let gui_state = gui_state.unwrap();
     if gui_state.water_speed == 0 {
         return;
     }
@@ -230,14 +256,11 @@ fn show_water(
         (&mut Transform, &mut Visibility, &mut PreferredSolver),
         With<WaterMarker>,
     >,
-    gui_query: Query<&GuiState, Changed<GuiState>>,
+    gui_state: Res<GuiState>,
 ) {
-    let gui_state = gui_query.iter().next();
-    if gui_state.is_none() {
-        return;
-    }
-    let gui_state = gui_state.unwrap();
     for (_t, mut visible, _solver) in water_query.iter_mut() {
-        visible.is_visible = gui_state.show_water;
+        if visible.is_visible != gui_state.show_water {
+            visible.is_visible = gui_state.show_water;
+        }
     }
 }

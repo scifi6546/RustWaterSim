@@ -19,12 +19,12 @@ pub struct CameraLabel;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(DefaultRaycastingPlugin::<GroundMarker>::default())
-            .add_system_set(SystemSet::on_enter(GameState::Playing))
+            .add_system_set(SystemSet::on_enter(GameState::Sandbox))
             .add_startup_system(spawn_camera)
             .add_system_set(
-                SystemSet::on_update(GameState::Playing)
+                SystemSet::on_update(GameState::Sandbox)
                     .with_system(move_player)
-                    .with_system(build_water)
+                    .with_system(build_ground_system)
                     .with_system(update_raycast_cursor),
             )
             .add_system_to_stage(
@@ -34,9 +34,9 @@ impl Plugin for PlayerPlugin {
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, SystemLabel)]
-struct RayCastBuildLabel;
+pub struct RayCastBuildLabel;
 #[derive(Component, Copy, Clone, Debug)]
-struct BrushCursorMarker;
+pub struct BrushCursorMarker;
 const SPAWN_RADIUS: f32 = 10.0;
 fn spawn_camera(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     info!("spawining camera");
@@ -80,7 +80,8 @@ fn update_raycast_cursor(
         pick_source.cast_method = RayCastMethod::Screenspace(cursor_position);
     }
 }
-fn build_water(
+/// system that handles player ground brush
+pub fn build_ground_system(
     mouse_input: Res<Input<MouseButton>>,
     mut mesh_assets: ResMut<Assets<Mesh>>,
     ray_cast_iter: Query<&RayCastSource<GroundMarker>>,
@@ -116,7 +117,9 @@ fn build_water(
             for x in p_x - brush_radius..p_x + brush_radius + 1 {
                 for y in p_y - brush_radius..p_y + brush_radius + 1 {
                     if x < solver.dim_x() as i32 && x >= 0 && y < solver.dim_y() as i32 && y >= 0 {
-                        *solver.get_ground_mut(x as usize, y as usize) += 0.8;
+                        let r = ((x as f32 - p.x).powi(2) + (y as f32 - p.z).powi(2)).sqrt();
+                        let incr = (1.0 - r / brush_radius as f32).max(0.0);
+                        *solver.get_ground_mut(x as usize, y as usize) += 0.8 * incr;
                     }
                 }
             }
