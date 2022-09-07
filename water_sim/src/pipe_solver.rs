@@ -24,6 +24,7 @@ pub struct PipeSolver {
     water: Grid<f32>,
     velocity: Grid<Pipes>,
     ground: Grid<f32>,
+    dissolved_ground: Grid<f32>,
     sources: Vec<Source>,
     t: u32,
 }
@@ -35,13 +36,15 @@ impl Solver for PipeSolver {
             water,
             velocity: Grid::from_fn(|_, _| Pipes::default(), dimensions),
             ground,
+            dissolved_ground: Grid::from_fn(|_, _| 0.0, dimensions),
             sources,
             t: 0,
         }
     }
 
-    fn solve(&mut self, boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
+    fn solve(&mut self, _boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.solve_pipe();
+        self.solve_erode();
         (&self.water, vec![])
     }
 
@@ -53,14 +56,14 @@ impl Solver for PipeSolver {
         &self.ground
     }
 
-    fn get_ground_mut(&mut self, x: usize, y: usize) -> &mut f32 {
-        self.ground.get_mut(x, y)
-    }
     fn dim_x(&self) -> usize {
         self.water.x()
     }
     fn dim_y(&self) -> usize {
         self.water.y()
+    }
+    fn get_ground_mut(&mut self, x: usize, y: usize) -> &mut f32 {
+        self.ground.get_mut(x, y)
     }
 }
 
@@ -71,6 +74,21 @@ impl PipeSolver {
     const G: f32 = 9.81;
     fn get_w_g_h(&self, x: usize, y: usize) -> f32 {
         self.water.get(x, y) + self.ground.get(x, y)
+    }
+    fn solve_erode(&mut self) {
+        let softness = 0.01;
+        let dim_x = self.water.x();
+        let dim_y = self.water.y();
+        for x in 0..dim_x + 1 {
+            for y in 0..dim_y + 1 {
+                let ground_height = self.ground.get_mut(x, y);
+                let pipe = self.velocity.get(x, y);
+                let v_x = pipe.r - pipe.l;
+                let v_y = pipe.u - pipe.d;
+                let v = (v_x.powi(2) + v_y.powi(2)).sqrt();
+                let cap = softness * v;
+            }
+        }
     }
     fn kernel(
         f_x0y0: Pipes,
