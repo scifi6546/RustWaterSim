@@ -7,7 +7,9 @@ use crate::prelude::{
 use bevy::prelude::*;
 use nalgebra::Vector2;
 use std::sync::{Arc, Mutex};
-use water_sim::{BoundaryConditions, Grid, PreferredSolver, Solver, SolverBoundaryConditions};
+use water_sim::{
+    BoundaryConditions, Grid, PreferredSolver, Solver, SolverBoundaryConditions, Source,
+};
 
 pub struct MissionPlugin;
 impl Plugin for MissionPlugin {
@@ -105,9 +107,14 @@ impl MissionScenario for Canal {
         }
         let dimensions = Vector2::new(300, 100);
         PreferredSolver::new(
-            Grid::from_fn(|x, y| 1.0, dimensions),
+            Grid::from_fn(|x, y| 0.0, dimensions),
             Grid::from_fn(g, dimensions),
-            Vec::new(),
+            vec![Source {
+                center: Vector2::new(50.0, 50.0),
+                radius: 5.0,
+                height: 1.0,
+                period: 10.0,
+            }],
             SolverBoundaryConditions {
                 x_plus: BoundaryConditions::Absorb,
                 x_minus: BoundaryConditions::Absorb,
