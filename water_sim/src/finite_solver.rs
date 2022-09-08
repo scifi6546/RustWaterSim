@@ -2,7 +2,7 @@
 /// Current Wierdness:
 ///  - When having circle there is interference that breaks the model  
 ///     propagating backwards from wave front
-use super::{AABBBarrier, Grid, SolveInfo, Solver, Source};
+use super::{AABBBarrier, Grid, SolveInfo, Solver, SolverBoundaryConditions, Source};
 use bevy::prelude::*;
 use nalgebra::Vector2;
 
@@ -33,7 +33,12 @@ pub struct FiniteSolver {
     sources: Vec<Source>,
 }
 impl Solver for FiniteSolver {
-    fn new(water: Grid<f32>, ground: Grid<f32>, sources: Vec<Source>) -> Self {
+    fn new(
+        water: Grid<f32>,
+        ground: Grid<f32>,
+        sources: Vec<Source>,
+        _boundary_conditions: SolverBoundaryConditions,
+    ) -> Self {
         assert_eq!(water.x(), ground.x());
         assert_eq!(water.y(), ground.y());
         let dim = Vector2::new(water.x(), water.y());

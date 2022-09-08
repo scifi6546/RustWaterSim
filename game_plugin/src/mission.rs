@@ -6,7 +6,8 @@ use crate::prelude::{
 };
 use bevy::prelude::*;
 use nalgebra::Vector2;
-use water_sim::{Grid, PreferredSolver, Solver};
+use std::sync::{Arc, Mutex};
+use water_sim::{BoundaryConditions, Grid, PreferredSolver, Solver, SolverBoundaryConditions};
 
 pub struct MissionPlugin;
 impl Plugin for MissionPlugin {
@@ -35,9 +36,20 @@ pub trait MissionScenario: Send {
     fn name(&self) -> String;
     fn get_lost(&self, solver: &PreferredSolver) -> bool;
 }
-unsafe impl Send for Box<dyn MissionScenario> {}
-pub fn get_missions() -> Vec<Box<dyn MissionScenario>> {
-    vec![Box::new(TsunamiScenario {})]
+#[derive(Clone, Component)]
+pub struct Mission {
+    pub scenario: Arc<Mutex<dyn MissionScenario>>,
+}
+
+pub fn get_missions() -> Vec<Mission> {
+    vec![
+        Mission {
+            scenario: Arc::new(Mutex::new(TsunamiScenario {})),
+        },
+        Mission {
+            scenario: Arc::new(Mutex::new(Canal {})),
+        },
+    ]
 }
 fn insert_mission(mut commands: Commands) {
     commands.insert_resource(get_missions())
@@ -67,6 +79,7 @@ impl MissionScenario for TsunamiScenario {
             ),
             Grid::from_fn(|x, y| ground(x, y), Vector2::new(100, 100)),
             Vec::new(),
+            SolverBoundaryConditions::default(),
         )
     }
     fn name(&self) -> String {
@@ -81,25 +94,51 @@ impl MissionScenario for TsunamiScenario {
         loose_vol < vol
     }
 }
+pub struct Canal {}
+impl MissionScenario for Canal {
+    fn get_solver(&self) -> PreferredSolver {
+        fn g(x: usize, y: usize) -> f32 {
+            let x = x as f32;
+            let y = y as f32;
+            let d = (y - 50.0 + 5.0 * (x * 0.1).sin()).abs().min(20.0);
+            d * 1.0 - 0.1 * x
+        }
+        let dimensions = Vector2::new(300, 100);
+        PreferredSolver::new(
+            Grid::from_fn(|x, y| 1.0, dimensions),
+            Grid::from_fn(g, dimensions),
+            Vec::new(),
+            SolverBoundaryConditions {
+                x_plus: BoundaryConditions::Absorb,
+                x_minus: BoundaryConditions::Absorb,
+                y_plus: BoundaryConditions::Absorb,
+                y_minus: BoundaryConditions::Absorb,
+            },
+        )
+    }
+
+    fn name(&self) -> String {
+        "Canal".to_string()
+    }
+
+    fn get_lost(&self, solver: &PreferredSolver) -> bool {
+        false
+    }
+}
 #[derive(Component)]
 pub struct DebugWin;
 
 fn win_condition(
-    mut commands: Commands,
+    current_mission: Res<Mission>,
     asset_server: Res<AssetServer>,
     water_query: Query<&PreferredSolver, ()>,
     mut text: Query<&mut Text, With<DebugWin>>,
 ) {
-    const LOOSE_VOL: f32 = 100.0;
     for water in water_query.iter() {
-        let water_height = water.water_h();
-        let max_vol = 10.0;
-        let vol = (90..100)
-            .flat_map(|x| (0..50).map(move |y| water_height.get(x, y)))
-            .fold(0.0, |acc, x| acc + x);
-        info!("vol: {}", vol);
-        let write_text = if vol < LOOSE_VOL {
-            format!("volume of water in town:\n{}", vol)
+        let lost = current_mission.scenario.lock().unwrap().get_lost(water);
+
+        let write_text = if !lost {
+            "todo: info".to_string()
         } else {
             format!("lost!!")
         };
@@ -113,41 +152,18 @@ fn win_condition(
                 },
             )];
         }
-        if vol >= max_vol {
-            info!("lost!!!")
-        }
     }
 }
 fn build_water(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
+    active_mission: Res<Mission>,
+    meshes: ResMut<Assets<Mesh>>,
     aabb_material: Res<AABBMaterial>,
     asset_server: Res<AssetServer>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    fn ground(x: usize, y: usize) -> f32 {
-        if x < 60 {
-            0.0
-        } else if x <= 80 {
-            10.0 * (x as f32 - 60.0) / 20.0
-        } else {
-            10.0
-        }
-    }
-    let water = PreferredSolver::new(
-        Grid::from_fn(
-            |x, y| {
-                if x < 20 {
-                    20.0
-                } else {
-                    (8.0 - ground(x, y)).max(0.0)
-                }
-            },
-            Vector2::new(100, 100),
-        ),
-        Grid::from_fn(|x, y| ground(x, y), Vector2::new(100, 100)),
-        Vec::new(),
-    );
+    let scenario = active_mission.scenario.lock().unwrap();
+    let water = scenario.get_solver();
     commands
         .spawn_bundle(TextBundle::from_section(
             "",

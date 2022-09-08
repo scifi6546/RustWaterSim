@@ -19,7 +19,28 @@ pub struct SolveInfo {
     pub name: &'static str,
     pub data: String,
 }
-
+#[derive(Clone, Copy, Debug)]
+pub enum BoundaryConditions {
+    Reflect,
+    Absorb,
+}
+#[derive(Clone, Copy, Debug)]
+pub struct SolverBoundaryConditions {
+    pub x_plus: BoundaryConditions,
+    pub x_minus: BoundaryConditions,
+    pub y_plus: BoundaryConditions,
+    pub y_minus: BoundaryConditions,
+}
+impl Default for SolverBoundaryConditions {
+    fn default() -> Self {
+        Self {
+            x_plus: BoundaryConditions::Reflect,
+            x_minus: BoundaryConditions::Reflect,
+            y_plus: BoundaryConditions::Reflect,
+            y_minus: BoundaryConditions::Reflect,
+        }
+    }
+}
 #[derive(Clone)]
 pub struct Grid<T: Clone + Copy> {
     points: Vec<T>,
@@ -87,7 +108,12 @@ impl<T: std::ops::Add + std::ops::AddAssign + Clone + Copy> std::ops::Add for Gr
 }
 pub type PreferredSolver = pipe_solver::PipeSolver;
 pub trait Solver {
-    fn new(water: Grid<f32>, ground: Grid<f32>, sources: Vec<Source>) -> Self;
+    fn new(
+        water: Grid<f32>,
+        ground: Grid<f32>,
+        sources: Vec<Source>,
+        boundary_conditions: SolverBoundaryConditions,
+    ) -> Self;
     fn solve(&mut self, boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>);
     fn water_h(&self) -> &Grid<f32>;
     fn ground_h(&self) -> &Grid<f32>;
@@ -161,7 +187,7 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 let g_h = Grid::from_fn(|_x, _y| 0.0, Vector2::new(100, 200));
 
                 (
-                    T::new(h, g_h, Vec::new()),
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
                     vec![
                         AABBBarrier {
                             top_right: Vector2::new(30, 110),
@@ -196,7 +222,7 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 let g_h = Grid::from_fn(|_x, _y| 0.0, Vector2::new(100, 1000));
 
                 (
-                    T::new(h, g_h, Vec::new()),
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
                     vec![
                         AABBBarrier {
                             top_right: Vector2::new(30, 110),
@@ -230,7 +256,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 );
                 let g_h = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 100));
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -249,7 +278,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 );
                 let g_h = Grid::from_fn(|_, _| 0.0, Vector2::new(100, 100));
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -283,7 +315,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                     dimensions,
                 );
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -307,7 +342,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                     Vector2::new(400, 200),
                 );
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -322,7 +360,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 );
                 let h = Grid::from_fn(|_, _| 2.0, Vector2::new(400, 400));
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -348,7 +389,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                     Vector2::new(100, 100),
                 );
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -363,7 +407,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                     radius: 10.0,
                     period: 1000.0,
                 }];
-                (T::new(h, g_h, sources), vec![])
+                (
+                    T::new(h, g_h, sources, SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -386,7 +433,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                         period: 400.0,
                     },
                 ];
-                (T::new(h, g_h, sources), vec![])
+                (
+                    T::new(h, g_h, sources, SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -410,7 +460,10 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 );
                 let g_h = Grid::from_fn(|_x, _y| 0.0, Vector2::new(250, 250));
 
-                (T::new(h, g_h, Vec::new()), vec![])
+                (
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
+                    vec![],
+                )
             },
         },
         InitialConditions {
@@ -437,7 +490,7 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
                 );
 
                 (
-                    T::new(h, g_h, Vec::new()),
+                    T::new(h, g_h, Vec::new(), SolverBoundaryConditions::default()),
                     vec![
                         AABBBarrier {
                             top_right: Vector2::new(20, 50),

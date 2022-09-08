@@ -1,9 +1,10 @@
 use crate::loading::FontAssets;
 use crate::prelude::{
-    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document,
+    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, Mission,
     MissionScenario, GUI_STYLE,
 };
 use crate::GameState;
+
 use bevy::prelude::*;
 use std::default;
 use water_sim::{InitialConditions, PreferredSolver};
@@ -11,6 +12,8 @@ use water_sim::{InitialConditions, PreferredSolver};
 pub struct MenuPlugin;
 #[derive(Component)]
 struct MenuItem;
+#[derive(Component, Copy, Clone, Debug)]
+struct depMissionButton;
 #[derive(Component, Copy, Clone, Debug)]
 struct MissionButton;
 /// This plugin is responsible for the game menu (containing only one button...)
@@ -28,6 +31,7 @@ impl Plugin for MenuPlugin {
                 SystemSet::on_update(GameState::Menu)
                     .with_system(conditions_button)
                     .with_system(nav_system)
+                    .with_system(Dep_missions_button)
                     .with_system(missions_button),
             )
             .add_system_set(SystemSet::on_exit(GameState::Menu).with_system(despawn_gui));
@@ -50,7 +54,7 @@ fn setup_menu(
     mut commands: Commands,
     font_assets: Res<FontAssets>,
     document: Res<Document>,
-    missions: Res<Vec<std::sync::Mutex<Box<dyn MissionScenario>>>>,
+    missions: Res<Vec<Mission>>,
     asset_server: Res<AssetServer>,
     conditions: Res<Vec<InitialConditions<water_sim::PreferredSolver>>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -104,27 +108,32 @@ fn setup_menu(
                                 })
                                 .insert(MenuItem);
 
-                            parent
-                                .spawn_bundle(ButtonBundle {
-                                    style: Style {
-                                        size: Size::new(Val::Px(420.0), Val::Px(50.0)),
-                                        margin: UiRect::all(Val::Px(5.0)),
-                                        justify_content: JustifyContent::Center,
-                                        align_items: AlignItems::Center,
+                            for mission in missions.iter() {
+                                parent
+                                    .spawn_bundle(ButtonBundle {
+                                        style: Style {
+                                            size: Size::new(Val::Px(420.0), Val::Px(50.0)),
+                                            margin: UiRect::all(Val::Px(5.0)),
+                                            justify_content: JustifyContent::Center,
+                                            align_items: AlignItems::Center,
+                                            ..Default::default()
+                                        },
+                                        color: UiColor(GUI_STYLE.button_normal_color),
                                         ..Default::default()
-                                    },
-                                    color: UiColor(GUI_STYLE.button_normal_color),
-                                    ..Default::default()
-                                })
-                                .insert(MenuItem)
-                                .insert(MissionButton)
-                                .with_children(|parent| {
-                                    for mission in missions.iter() {
+                                    })
+                                    .insert(MenuItem)
+                                    .insert(MissionButton)
+                                    .insert(mission.clone())
+                                    .with_children(|parent| {
                                         parent
                                             .spawn_bundle(TextBundle {
                                                 text: Text {
                                                     sections: vec![TextSection {
-                                                        value: mission.name(),
+                                                        value: mission
+                                                            .scenario
+                                                            .lock()
+                                                            .unwrap()
+                                                            .name(),
                                                         style: TextStyle {
                                                             font: font_assets.fira_sans.clone(),
                                                             font_size: 40.0,
@@ -136,25 +145,10 @@ fn setup_menu(
                                                 ..Default::default()
                                             })
                                             .insert(MenuItem);
-                                    }
-                                    parent
-                                        .spawn_bundle(TextBundle {
-                                            text: Text {
-                                                sections: vec![TextSection {
-                                                    value: "Basic Town".to_string(),
-                                                    style: TextStyle {
-                                                        font: font_assets.fira_sans.clone(),
-                                                        font_size: 40.0,
-                                                        color: GUI_STYLE.button_text_color,
-                                                    },
-                                                }],
-                                                alignment: Default::default(),
-                                            },
-                                            ..Default::default()
-                                        })
-                                        .insert(MenuItem);
-                                });
+                                    });
+                            }
                         });
+
                     parent
                         .spawn_bundle(NodeBundle {
                             style: Style {
@@ -226,16 +220,41 @@ fn setup_menu(
         },
     );
 }
-fn missions_button(
+fn Dep_missions_button(
     mut state: ResMut<State<GameState>>,
     mut interaction_query: Query<
         (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<Button>, With<MissionButton>),
+        (Changed<Interaction>, With<Button>, With<depMissionButton>),
     >,
 ) {
     for (interaction, mut material) in interaction_query.iter_mut() {
         match *interaction {
             Interaction::Clicked => {
+                panic!("invalid button");
+                state.set(GameState::Mission).unwrap();
+            }
+            Interaction::Hovered => {
+                info!("hovered");
+                *material = UiColor(GUI_STYLE.button_hover_color);
+            }
+            Interaction::None => {
+                *material = UiColor(GUI_STYLE.button_normal_color);
+            }
+        }
+    }
+}
+fn missions_button(
+    mut commands: Commands,
+    mut state: ResMut<State<GameState>>,
+    mut interaction_query: Query<
+        (&Interaction, &mut UiColor, &Mission),
+        (Changed<Interaction>, With<Button>, With<MissionButton>),
+    >,
+) {
+    for (interaction, mut material, mission) in interaction_query.iter_mut() {
+        match *interaction {
+            Interaction::Clicked => {
+                commands.insert_resource(mission.clone());
                 state.set(GameState::Mission).unwrap();
             }
             Interaction::Hovered => {

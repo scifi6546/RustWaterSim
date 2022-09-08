@@ -37,7 +37,7 @@ pub mod prelude {
         GuiParent,
     };
     pub use super::menu::SelectStartupInfo;
-    pub use super::mission::MissionScenario;
+    pub use super::mission::{Mission, MissionScenario};
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
