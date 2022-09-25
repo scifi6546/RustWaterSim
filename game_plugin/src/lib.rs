@@ -1,4 +1,5 @@
 mod actions;
+mod brush;
 mod file_save;
 mod game_menu;
 mod gui;
@@ -24,8 +25,9 @@ use bevy::winit;
 use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 use water::WaterPlugin;
 pub mod prelude {
+    pub use super::brush::BrushBudget;
     pub use super::game_menu::{
-        AddBoxButton, ButtonMaterial, GameEntity, GameMenu, GuiState, GuiStyle, LeaveButton,
+        dep_ButtonMaterial, AddBoxButton, GameEntity, GameMenu, GuiState, GuiStyle, LeaveButton,
         LeaveText, PauseButton, PauseTexture, PlayButton, PlayTexture, SaveWaterButton, ShowSpeed,
         ShowVelocities, ShowWater, SolveInfoLabel, SpeedDirection, ViscocityChange, GUI_STYLE,
         MAX_WATER_SPEED,
@@ -41,7 +43,7 @@ pub mod prelude {
     pub use super::player::CameraLabel;
     pub use super::water::{
         aabb::{aabb_barrier_from_transform, build_barrier, AABBMaterial},
-        build_water_mesh, get_water_position, AABBBarrier, GroundMarker, InitialConditions,
+        build_water_mesh_system, get_water_position, AABBBarrier, GroundMarker, InitialConditions,
         SolveInfo, SolveInfoVec, WaterMarker, WaterPlugin, WaterRunPlugin, WATER_SIZE,
     };
     pub use super::GameState;
@@ -78,6 +80,7 @@ impl Plugin for GamePlugin {
             .add_plugin(markdown::DocumentPlugin)
             .add_plugin(LookTransformPlugin)
             .add_plugin(mission::MissionPlugin)
+            .add_plugin(brush::BrushPlugin)
             .add_plugin(sandbox::SandboxPlugin)
             .add_plugin(OrbitCameraPlugin {
                 override_input_system: false,

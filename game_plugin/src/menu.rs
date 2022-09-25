@@ -1,12 +1,11 @@
-use crate::loading::FontAssets;
 use crate::prelude::{
-    build_gui, despawn_gui, nav_system, BuiltParentLabel, ButtonMaterial, Document, Mission,
-    MissionScenario, GUI_STYLE,
+    build_gui, dep_ButtonMaterial, despawn_gui, nav_system, BuiltParentLabel, Document, FontAssets,
+    Mission, GUI_STYLE,
 };
 use crate::GameState;
 
 use bevy::prelude::*;
-use std::default;
+
 use water_sim::{InitialConditions, PreferredSolver};
 
 pub struct MenuPlugin;
@@ -20,7 +19,7 @@ struct MissionButton;
 /// The menu is only drawn during the State `GameState::Menu` and is removed when that state is exited
 impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<ButtonMaterial>()
+        app.init_resource::<dep_ButtonMaterial>()
             .add_startup_system(insert_conditions)
             .add_system_set(
                 SystemSet::on_enter(GameState::Menu)
@@ -31,7 +30,6 @@ impl Plugin for MenuPlugin {
                 SystemSet::on_update(GameState::Menu)
                     .with_system(conditions_button)
                     .with_system(nav_system)
-                    .with_system(Dep_missions_button)
                     .with_system(missions_button),
             )
             .add_system_set(SystemSet::on_exit(GameState::Menu).with_system(despawn_gui));
@@ -57,17 +55,13 @@ fn setup_menu(
     missions: Res<Vec<Mission>>,
     asset_server: Res<AssetServer>,
     conditions: Res<Vec<InitialConditions<water_sim::PreferredSolver>>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    button_materials: Res<ButtonMaterial>,
 ) {
     build_gui(
         &mut commands,
-        &mut materials,
         &font_assets,
-        &button_materials,
         &document,
         &asset_server,
-        |_, _, parent| {
+        |_, parent| {
             info!("building setup menu");
             info!("building based off of parent");
             parent
@@ -220,29 +214,7 @@ fn setup_menu(
         },
     );
 }
-fn Dep_missions_button(
-    mut state: ResMut<State<GameState>>,
-    mut interaction_query: Query<
-        (&Interaction, &mut UiColor),
-        (Changed<Interaction>, With<Button>, With<depMissionButton>),
-    >,
-) {
-    for (interaction, mut material) in interaction_query.iter_mut() {
-        match *interaction {
-            Interaction::Clicked => {
-                panic!("invalid button");
-                state.set(GameState::Mission).unwrap();
-            }
-            Interaction::Hovered => {
-                info!("hovered");
-                *material = UiColor(GUI_STYLE.button_hover_color);
-            }
-            Interaction::None => {
-                *material = UiColor(GUI_STYLE.button_normal_color);
-            }
-        }
-    }
-}
+
 fn missions_button(
     mut commands: Commands,
     mut state: ResMut<State<GameState>>,

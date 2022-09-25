@@ -1,9 +1,9 @@
 use crate::prelude::{
     aabb_barrier_from_transform, build_barrier, despawn_gui, AABBMaterial, AddBoxButton,
-    FontAssets, GameEntity, GameMenu, GameState, GuiState, LeaveButton, LeaveText, PauseButton,
-    PauseTexture, PlayButton, PlayTexture, SaveWaterButton, ShowSpeed, ShowVelocities, ShowWater,
-    SolveInfoLabel, SolveInfoVec, SpeedDirection, ViscocityChange, WaterMarker, GUI_STYLE,
-    MAX_WATER_SPEED, WATER_SIZE,
+    GameEntity, GameMenu, GameState, GuiState, LeaveButton, LeaveText, PauseButton, PauseTexture,
+    PlayButton, PlayTexture, SaveWaterButton, ShowSpeed, ShowVelocities, ShowWater, SolveInfoLabel,
+    SolveInfoVec, SpeedDirection, ViscocityChange, WaterMarker, GUI_STYLE, MAX_WATER_SPEED,
+    WATER_SIZE,
 };
 use bevy::prelude::*;
 use nalgebra::Vector2;
@@ -53,6 +53,7 @@ pub fn build_play_menu(
     parent: &mut ChildBuilder<'_, '_, '_>,
     asset_server: &Res<AssetServer>,
     gui_state: &GuiState,
+    play_contents: impl FnOnce(&Res<AssetServer>, &mut ChildBuilder<'_, '_, '_>),
 ) {
     parent
         .spawn_bundle(NodeBundle {
@@ -77,7 +78,7 @@ pub fn build_play_menu(
         .insert(GameEntity)
         .with_children(|parent| {
             build_sidebar(parent, asset_server, &gui_state);
-            build_playbar(parent, asset_server, &gui_state);
+            build_playbar(parent, asset_server, play_contents);
         })
         .insert(GameEntity);
 }
@@ -268,7 +269,7 @@ pub fn build_sidebar(
 pub fn build_playbar(
     parent: &mut ChildBuilder<'_, '_, '_>,
     asset_server: &Res<AssetServer>,
-    gui_state: &GuiState,
+    contents: impl FnOnce(&Res<AssetServer>, &mut ChildBuilder<'_, '_, '_>),
 ) {
     parent
         .spawn_bundle(NodeBundle {
@@ -375,6 +376,7 @@ pub fn build_playbar(
                         })
                         .insert(GameEntity)
                         .insert(ShowSpeed);
+                    contents(asset_server, parent);
                 })
                 .insert(GameEntity);
 
@@ -414,7 +416,7 @@ pub fn build_playbar(
         })
         .insert(GameEntity);
 }
-fn show_speed(mut gui_state: ResMut<GuiState>, mut query: Query<&mut Text, With<ShowSpeed>>) {
+fn show_speed(gui_state: Res<GuiState>, mut query: Query<&mut Text, With<ShowSpeed>>) {
     for mut text in query.iter_mut() {
         if gui_state.water_speed == 0 {
             text.sections[0].value = "Paused".to_string();

@@ -1,15 +1,15 @@
 mod gui;
+mod mission_list;
 
 use crate::prelude::{
-    build_water_mesh, AABBMaterial, GameEntity, GameState, GuiRunner, WaterPlugin, WaterRunPlugin,
+    build_water_mesh_system, AABBMaterial, BrushBudget, GameState, GuiRunner, WaterRunPlugin,
     GUI_STYLE,
 };
+
 use bevy::prelude::*;
-use nalgebra::Vector2;
+
 use std::sync::{Arc, Mutex};
-use water_sim::{
-    BoundaryConditions, Grid, PreferredSolver, Solver, SolverBoundaryConditions, Source,
-};
+use water_sim::{Grid, PreferredSolver, SolverBoundaryConditions, Source};
 
 pub struct MissionPlugin;
 impl Plugin for MissionPlugin {
@@ -25,130 +25,55 @@ impl Plugin for MissionPlugin {
                 .with_system(gui::build_gui)
                 .with_system(build_water),
         )
-        .add_system_set(SystemSet::on_enter(GameState::Loading).with_system(insert_mission))
+        .add_system_set(
+            SystemSet::on_enter(GameState::Loading).with_system(mission_list::insert_missions),
+        )
         .add_system_set(
             SystemSet::on_update(GameState::Mission)
-                .with_system(crate::player::build_ground_system)
+                .with_system(crate::brush::build_ground_system)
                 .with_system(win_condition),
-        );
+        )
+        .add_system_set(SystemSet::on_exit(GameState::Mission).with_system(reset_budget));
     }
 }
+pub enum WinState {
+    Won,
+    Lost,
+    InProgress(String),
+}
 pub trait MissionScenario: Send {
-    fn get_solver(&self) -> PreferredSolver;
+    fn get_solver(&self) -> (PreferredSolver, BrushBudget);
     fn name(&self) -> String;
-    fn get_lost(&self, solver: &PreferredSolver) -> bool;
+    fn get_win_state(&self, solver: &PreferredSolver, budget: &BrushBudget) -> WinState;
 }
 #[derive(Clone, Component)]
 pub struct Mission {
     pub scenario: Arc<Mutex<dyn MissionScenario>>,
 }
 
-pub fn get_missions() -> Vec<Mission> {
-    vec![
-        Mission {
-            scenario: Arc::new(Mutex::new(TsunamiScenario {})),
-        },
-        Mission {
-            scenario: Arc::new(Mutex::new(Canal {})),
-        },
-    ]
-}
-fn insert_mission(mut commands: Commands) {
-    commands.insert_resource(get_missions())
-}
-struct TsunamiScenario {}
-impl MissionScenario for TsunamiScenario {
-    fn get_solver(&self) -> PreferredSolver {
-        fn ground(x: usize, y: usize) -> f32 {
-            if x < 60 {
-                0.0
-            } else if x <= 80 {
-                10.0 * (x as f32 - 60.0) / 20.0
-            } else {
-                10.0
-            }
-        }
-        PreferredSolver::new(
-            Grid::from_fn(
-                |x, y| {
-                    if x < 20 {
-                        20.0
-                    } else {
-                        (8.0 - ground(x, y)).max(0.0)
-                    }
-                },
-                Vector2::new(100, 100),
-            ),
-            Grid::from_fn(|x, y| ground(x, y), Vector2::new(100, 100)),
-            Vec::new(),
-            SolverBoundaryConditions::default(),
-        )
-    }
-    fn name(&self) -> String {
-        "Tsunami".to_string()
-    }
-    fn get_lost(&self, solver: &PreferredSolver) -> bool {
-        let loose_vol = 100.0f32;
-        let water_height = solver.water_h();
-        let vol = (90..100)
-            .flat_map(|x| (0..50).map(move |y| water_height.get(x, y)))
-            .fold(0.0, |acc, x| acc + x);
-        loose_vol < vol
-    }
-}
-pub struct Canal {}
-impl MissionScenario for Canal {
-    fn get_solver(&self) -> PreferredSolver {
-        fn g(x: usize, y: usize) -> f32 {
-            let x = x as f32;
-            let y = y as f32;
-            let d = (y - 50.0 + 5.0 * (x * 0.1).sin()).abs().min(20.0);
-            d * 1.0 - 0.1 * x
-        }
-        let dimensions = Vector2::new(300, 100);
-        PreferredSolver::new(
-            Grid::from_fn(|x, y| 0.0, dimensions),
-            Grid::from_fn(g, dimensions),
-            vec![Source {
-                center: Vector2::new(50.0, 50.0),
-                radius: 5.0,
-                height: 1.0,
-                period: 10.0,
-            }],
-            SolverBoundaryConditions {
-                x_plus: BoundaryConditions::Absorb,
-                x_minus: BoundaryConditions::Absorb,
-                y_plus: BoundaryConditions::Absorb,
-                y_minus: BoundaryConditions::Absorb,
-            },
-        )
-    }
-
-    fn name(&self) -> String {
-        "Canal".to_string()
-    }
-
-    fn get_lost(&self, solver: &PreferredSolver) -> bool {
-        false
-    }
-}
 #[derive(Component)]
 pub struct DebugWin;
 
 fn win_condition(
     current_mission: Res<Mission>,
     asset_server: Res<AssetServer>,
+    brush_budget: Res<BrushBudget>,
     water_query: Query<&PreferredSolver, ()>,
+
     mut text: Query<&mut Text, With<DebugWin>>,
 ) {
     for water in water_query.iter() {
-        let lost = current_mission.scenario.lock().unwrap().get_lost(water);
-
-        let write_text = if !lost {
-            "todo: info".to_string()
-        } else {
-            format!("lost!!")
+        let lost = current_mission
+            .scenario
+            .lock()
+            .unwrap()
+            .get_win_state(water, &brush_budget);
+        let write_text = match lost {
+            WinState::Won => "won!".to_string(),
+            WinState::InProgress(t) => t,
+            WinState::Lost => "lost".to_string(),
         };
+
         for mut t in text.iter_mut() {
             t.sections = vec![TextSection::new(
                 write_text.clone(),
@@ -166,23 +91,13 @@ fn build_water(
     active_mission: Res<Mission>,
     meshes: ResMut<Assets<Mesh>>,
     aabb_material: Res<AABBMaterial>,
-    asset_server: Res<AssetServer>,
     materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let scenario = active_mission.scenario.lock().unwrap();
-    let water = scenario.get_solver();
-    commands
-        .spawn_bundle(TextBundle::from_section(
-            "",
-            TextStyle {
-                font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                font_size: 30.0,
-                color: GUI_STYLE.button_text_color,
-            },
-        ))
-        .insert(GameEntity)
-        .insert(DebugWin);
-    build_water_mesh(
+    let (water, budget) = scenario.get_solver();
+    commands.insert_resource(budget);
+
+    build_water_mesh_system(
         water,
         Vec::new(),
         commands,
@@ -190,4 +105,10 @@ fn build_water(
         aabb_material,
         materials,
     );
+}
+fn reset_budget(mut brush_budget: ResMut<BrushBudget>) {
+    *brush_budget = BrushBudget {
+        used_ground: 0.0,
+        max_ground: None,
+    };
 }

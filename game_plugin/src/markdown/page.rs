@@ -1,5 +1,5 @@
 use super::{build_gui, FontAssets, RootNode};
-use crate::prelude::{ButtonMaterial, GUI_STYLE};
+use crate::prelude::{dep_ButtonMaterial, GUI_STYLE};
 use pulldown_cmark::{Event, Parser, Tag};
 
 use crate::GameState;
@@ -92,8 +92,7 @@ pub fn button(
     document: Res<Document>,
     asset_server: Res<AssetServer>,
     mut page_state: ResMut<PageState>,
-    materials: ResMut<Assets<ColorMaterial>>,
-    button_materials: Res<ButtonMaterial>,
+    button_materials: Res<dep_ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
     mut query: Query<
         (&mut Handle<ColorMaterial>, &Interaction, &super::PageButton),
@@ -111,15 +110,7 @@ pub fn button(
                     for root in root_query.iter() {
                         commands.entity(root).despawn_recursive();
                     }
-                    setup_page(
-                        commands,
-                        font_assets,
-                        document,
-                        asset_server,
-                        page_state,
-                        materials,
-                        button_materials,
-                    );
+                    setup_page(commands, font_assets, document, asset_server, page_state);
                     return;
                 } else {
                     state.set(GameState::Page).expect("failed to set state");
@@ -140,17 +131,13 @@ pub fn setup_page(
     document: Res<Document>,
     asset_server: Res<AssetServer>,
     page_state: ResMut<PageState>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    button_materials: Res<ButtonMaterial>,
 ) {
     build_gui(
         &mut commands,
-        &mut materials,
         &font_assets,
-        &button_materials,
         &document,
         &asset_server,
-        |materials, _, parent| {
+        |_, parent| {
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {

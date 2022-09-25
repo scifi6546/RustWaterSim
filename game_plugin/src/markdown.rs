@@ -1,4 +1,4 @@
-use super::prelude::{ButtonMaterial, GUI_STYLE};
+use super::prelude::{dep_ButtonMaterial, GUI_STYLE};
 use super::GameState;
 use crate::loading::FontAssets;
 use bevy::prelude::*;
@@ -53,16 +53,17 @@ pub struct PageButton {
 }
 #[derive(Copy, Clone, Component, Debug)]
 pub struct PageButtonMarker;
+pub struct GuiEntities {
+    pub nav_bar_entity: Entity,
+}
 pub fn build_gui(
     commands: &mut Commands,
-    materials: &mut ResMut<Assets<ColorMaterial>>,
     font_assets: &Res<FontAssets>,
-    button_material: &Res<ButtonMaterial>,
     document: &Res<Document>,
     asset_server: &Res<AssetServer>,
-
-    f: impl FnOnce(&Res<FontAssets>, &Res<AssetServer>, &mut ChildBuilder<'_, '_, '_>),
-) {
+    f: impl FnOnce(&Res<AssetServer>, &mut ChildBuilder<'_, '_, '_>),
+) -> GuiEntities {
+    let mut nav_bar_entity = None;
     commands
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -84,7 +85,8 @@ pub fn build_gui(
         })
         .insert(RootNode)
         .with_children(|parent| {
-            build_navbar(parent, &font_assets, document);
+            let a = build_navbar(parent, &font_assets, document);
+            nav_bar_entity = Some(a);
             parent
                 .spawn_bundle(NodeBundle {
                     style: Style {
@@ -107,16 +109,19 @@ pub fn build_gui(
                 })
                 .insert(GuiParent)
                 .with_children(|parent| {
-                    f(font_assets, asset_server, parent);
+                    f(asset_server, parent);
                 });
         });
+    GuiEntities {
+        nav_bar_entity: nav_bar_entity.unwrap(),
+    }
 }
 
 fn build_navbar<'a>(
     parent: &mut ChildBuilder<'_, '_, '_>,
     font_assets: &Res<FontAssets>,
     document: &Res<Document>,
-) {
+) -> Entity {
     parent
         .spawn_bundle(NodeBundle {
             style: Style {
@@ -189,9 +194,10 @@ fn build_navbar<'a>(
                     });
             }
         });
+    parent.parent_entity()
 }
 pub fn nav_system(
-    material: Res<ButtonMaterial>,
+    material: Res<dep_ButtonMaterial>,
     mut state: ResMut<State<GameState>>,
     mut query: Query<
         (&Interaction, &mut Handle<ColorMaterial>),

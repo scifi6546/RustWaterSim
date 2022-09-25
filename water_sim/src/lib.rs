@@ -23,6 +23,7 @@ pub struct SolveInfo {
 pub enum BoundaryConditions {
     Reflect,
     Absorb,
+    Ocean { level: f32 },
 }
 #[derive(Clone, Copy, Debug)]
 pub struct SolverBoundaryConditions {
@@ -324,7 +325,7 @@ pub fn get_conditions<T: Solver>() -> Vec<InitialConditions<T>> {
         InitialConditions {
             name: "Tsunami",
             build_water_fn: || {
-                fn ground_fn(x: usize, y: usize) -> f32 {
+                fn ground_fn(x: usize, _y: usize) -> f32 {
                     if x < 200 {
                         0.0
                     } else if x < 300 {

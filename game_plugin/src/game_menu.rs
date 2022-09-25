@@ -1,12 +1,5 @@
-use crate::prelude::{
-    aabb_barrier_from_transform, build_barrier, build_gui, despawn_gui, AABBMaterial, Document,
-    GuiRunner, SolveInfo, SolveInfoVec, WaterMarker, WATER_SIZE,
-};
-use crate::{loading::FontAssets, GameState};
 use bevy::prelude::*;
-use nalgebra::Vector2;
-use std::cmp::max;
-use water_sim::{PreferredSolver, Solver};
+
 pub struct GuiStyle {
     pub button_normal_color: Color,
     pub button_hover_color: Color,
@@ -112,18 +105,13 @@ pub const GUI_STYLE: GuiStyle = GuiStyle {
 #[derive(Component)]
 pub struct GameMenu;
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, SystemLabel)]
-enum GuiLabel {
-    GuiCreate,
-}
-
 /// Marks viscocoty change text button
 #[derive(Component)]
 pub struct ViscocityChange;
 #[derive(Component)]
 pub struct SolveInfoLabel;
 
-pub struct ButtonMaterial {
+pub struct dep_ButtonMaterial {
     pub normal: Handle<ColorMaterial>,
     pub hovered: Handle<ColorMaterial>,
     pub pressed: Handle<ColorMaterial>,
@@ -138,7 +126,7 @@ pub struct ButtonMaterial {
     pub nav_bar_button_clicked: Handle<ColorMaterial>,
     pub page: Handle<ColorMaterial>,
 }
-impl FromWorld for ButtonMaterial {
+impl FromWorld for dep_ButtonMaterial {
     fn from_world(world: &mut World) -> Self {
         let mut materials = world.get_resource_mut::<Assets<ColorMaterial>>().unwrap();
 

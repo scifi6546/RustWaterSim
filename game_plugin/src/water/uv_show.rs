@@ -1,4 +1,3 @@
-use super::WATER_SIZE;
 use crate::prelude::{GameEntity, GuiState};
 use bevy::{
     prelude::*,
@@ -7,8 +6,9 @@ use bevy::{
         render_resource::PrimitiveTopology,
     },
 };
-use water_sim::{PreferredSolver, Solver};
+use water_sim::PreferredSolver;
 /// appends cube to mesh
+#[allow(dead_code)]
 pub fn append_cube(mesh: &mut Mesh, translation: Vec3, box_scale: f32, height: f32) {
     let x: f32 = translation.x;
     let y: f32 = translation.y;
@@ -288,78 +288,4 @@ pub fn build_uv_cubes(
         })
         .insert(GameEntity)
         .insert(VShow);
-}
-pub fn run_uv_cubes(
-    mut mesh_assets: ResMut<Assets<Mesh>>,
-    gui_query: Query<&GuiState>,
-    water_query: Query<&PreferredSolver, ()>,
-    mut queries: ParamSet<(
-        Query<(&Handle<Mesh>, &mut Visibility), With<UShow>>,
-        Query<(&Handle<Mesh>, &mut Visibility), With<VShow>>,
-    )>,
-) {
-    //panic!()
-    /*
-    const CUBE_SCALE: f32 = 0.04;
-    const Y_SCALE: f32 = 1000.0;
-    let mut u_cubes = queries.p0();
-    let gui_state = gui_query.iter().next();
-    if gui_state.is_none() {
-        error!("gui state not found");
-        return;
-    }
-    let gui_state = gui_state.unwrap();
-    let water = water_query.iter().next();
-    if water.is_none() {
-        error!("failed to find solver");
-        return;
-    }
-    let water = water.unwrap();
-    let multiplier = WATER_SIZE / water.water_h().x() as f32;
-
-    for (mesh, mut visible) in u_cubes.iter_mut() {
-        if !gui_state.show_velocities {
-            visible.is_visible = false;
-            continue;
-        } else {
-            visible.is_visible = true;
-        }
-        let mut mesh = mesh_assets.get_mut(mesh).unwrap();
-        *mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        //u
-        let u = water.u();
-        for x in 0..u.x() {
-            for y in 0..u.y() {
-                append_cube(
-                    &mut mesh,
-                    Vec3::new(x as f32 * multiplier, 1.0, (y as f32 + 0.5) * multiplier),
-                    CUBE_SCALE,
-                    u.get(x, y) * Y_SCALE,
-                );
-            }
-        }
-    }
-    let mut v_cubes = queries.p1();
-    for (mesh, mut visible) in v_cubes.iter_mut() {
-        if !gui_state.show_velocities {
-            visible.is_visible = false;
-            continue;
-        } else {
-            visible.is_visible = true;
-        }
-        let mut mesh = mesh_assets.get_mut(mesh).unwrap();
-        *mesh = Mesh::new(PrimitiveTopology::TriangleList);
-        //u
-        let v = water.v();
-        for x in 0..v.x() {
-            for y in 0..v.y() {
-                append_cube(
-                    &mut mesh,
-                    Vec3::new((x as f32 + 0.5) * multiplier, 1.0, (y as f32) * multiplier),
-                    CUBE_SCALE,
-                    v.get(x, y) * Y_SCALE,
-                );
-            }
-        }
-    }*/
 }

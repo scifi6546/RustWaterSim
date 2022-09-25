@@ -53,7 +53,7 @@ impl Solver for PipeSolver {
 
     fn solve(&mut self, _boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.solve_pipe();
-        // self.solve_erode();
+        self.solve_erode();
         (&self.water, vec![])
     }
 
@@ -89,19 +89,64 @@ impl PipeSolver {
         self.water.get(x, y) + self.get_g_h(x, y)
     }
     fn solve_erode(&mut self) {
-        let softness = 0.01;
+        const GROUND_DELTA_T: f32 = 0.5;
+        let softness = 0.1;
         let dim_x = self.water.x();
         let dim_y = self.water.y();
+        let mut water_new = self.water.clone();
         for x in 0..dim_x {
             for y in 0..dim_y {
-                let ground_height = self.ground.get_mut(x, y);
                 let pipe = self.velocity.get(x, y);
-                let v_x = pipe.r - pipe.l;
-                let v_y = pipe.u - pipe.d;
-                let v = (v_x.powi(2) + v_y.powi(2)).sqrt();
+
+                let v = (pipe.r.powi(2) + pipe.l.powi(2) + pipe.d.powi(2) + pipe.u.powi(2)).sqrt();
+                // max concentration to take
                 let cap = softness * v;
+                let to_take =
+                    (cap - self.dissolved_ground.get(x, y)) * Self::DELTA_T * GROUND_DELTA_T;
+                *self.ground.get_mut(x, y) -= to_take;
+                *self.dissolved_ground.get_mut(x, y) += to_take;
+                *water_new.get_mut(x, y) += to_take;
             }
         }
+        self.water = water_new;
+        let mut new_dissoved_g = self.dissolved_ground.clone();
+        let mut water_new = self.water.clone();
+        for x in 1..dim_x - 1 {
+            for y in 1..dim_y - 1 {
+                let d_xm1y0 = self.dissolved_ground.get(x - 1, y) * self.water.get(x - 1, y);
+                let d_xp1y0 = self.dissolved_ground.get(x + 1, y) * self.water.get(x + 1, y);
+                let d_x0ym1 = self.dissolved_ground.get(x, y - 1) * self.water.get(x, y - 1);
+                let d_x0yp1 = self.dissolved_ground.get(x, y + 1) * self.water.get(x, y + 1);
+
+                let d_x0y0 = self.dissolved_ground.get(x, y) * self.water.get(x, y);
+
+                let v_xm1y0 = self.velocity.get(x - 1, y);
+                let v_xp1y0 = self.velocity.get(x + 1, y);
+                let v_x0ym1 = self.velocity.get(x, y - 1);
+                let v_x0yp1 = self.velocity.get(x, y + 1);
+
+                let v_x0y0 = self.velocity.get(x, y);
+
+                let ground_out = d_x0y0
+                    * Self::DELTA_T
+                    * GROUND_DELTA_T
+                    * (v_x0y0.l * Self::L_X
+                        + v_x0y0.r * Self::L_X
+                        + v_x0y0.d * Self::L_Y
+                        + v_x0y0.u * Self::L_Y);
+                let ground_in = Self::DELTA_T
+                    * GROUND_DELTA_T
+                    * (v_xm1y0.r * d_xm1y0 * Self::L_X
+                        + v_xp1y0.l * d_xp1y0 * Self::L_X
+                        + v_x0ym1.u * d_x0ym1 * Self::L_Y
+                        + v_x0yp1.d * d_x0yp1 * Self::L_Y);
+                let delta = ground_in - ground_out;
+                *new_dissoved_g.get_mut(x, y) += delta;
+                *water_new.get_mut(x, y) -= delta;
+            }
+        }
+        self.dissolved_ground = new_dissoved_g;
+        self.water = water_new;
     }
     fn kernel(
         f_x0y0: Pipes,
@@ -167,6 +212,7 @@ impl PipeSolver {
             let mut f = self.velocity.get(0, y);
             f.l = match self.boundary_conditions.x_minus {
                 BoundaryConditions::Absorb => f.l,
+                BoundaryConditions::Ocean { .. } => f.l,
                 BoundaryConditions::Reflect => 0.0,
             };
             *new_v.get_mut(0, y) = match self.boundary_conditions.x_minus {
@@ -176,6 +222,15 @@ impl PipeSolver {
                     self.get_w_g_h(0, y),
                     self.get_w_g_h(0, y),
                     self.get_w_g_h(1, y),
+                    self.get_w_g_h(0, y - 1),
+                    self.get_w_g_h(0, y + 1),
+                ),
+                BoundaryConditions::Ocean { level } => Self::kernel(
+                    f,
+                    self.water.get(0, y),
+                    self.get_w_g_h(0, y),
+                    self.get_w_g_h(0, y),
+                    level,
                     self.get_w_g_h(0, y - 1),
                     self.get_w_g_h(0, y + 1),
                 ),
@@ -193,6 +248,7 @@ impl PipeSolver {
             let mut f = self.velocity.get(dim_x - 1, y);
             f.r = match self.boundary_conditions.x_plus {
                 BoundaryConditions::Absorb => f.r,
+                BoundaryConditions::Ocean { .. } => f.r,
                 BoundaryConditions::Reflect => 0.0,
             };
             *new_v.get_mut(dim_x - 1, y) = match self.boundary_conditions.x_plus {
@@ -202,6 +258,15 @@ impl PipeSolver {
                     self.get_w_g_h(dim_x - 1, y),
                     self.get_w_g_h(dim_x - 2, y),
                     self.get_g_h(dim_x - 1, y),
+                    self.get_w_g_h(dim_x - 1, y - 1),
+                    self.get_w_g_h(dim_x - 1, y + 1),
+                ),
+                BoundaryConditions::Ocean { level } => Self::kernel(
+                    f,
+                    self.water.get(dim_x - 1, y),
+                    self.get_w_g_h(dim_x - 1, y),
+                    self.get_w_g_h(dim_x - 2, y),
+                    level,
                     self.get_w_g_h(dim_x - 1, y - 1),
                     self.get_w_g_h(dim_x - 1, y + 1),
                 ),
@@ -220,6 +285,7 @@ impl PipeSolver {
             let mut f = self.velocity.get(x, 0);
             f.d = match self.boundary_conditions.y_minus {
                 BoundaryConditions::Absorb => f.d,
+                BoundaryConditions::Ocean { .. } => f.d,
                 BoundaryConditions::Reflect => 0.0,
             };
             *new_v.get_mut(x, 0) = match self.boundary_conditions.y_minus {
@@ -230,6 +296,15 @@ impl PipeSolver {
                     self.get_w_g_h(x - 1, 0),
                     self.get_w_g_h(x + 1, 0),
                     self.get_g_h(x, 0),
+                    self.get_w_g_h(x, 1),
+                ),
+                BoundaryConditions::Ocean { level } => Self::kernel(
+                    f,
+                    self.water.get(x, 0),
+                    self.get_w_g_h(x, 0),
+                    self.get_w_g_h(x - 1, 0),
+                    self.get_w_g_h(x + 1, 0),
+                    level,
                     self.get_w_g_h(x, 1),
                 ),
                 BoundaryConditions::Reflect => Self::kernel(
@@ -246,6 +321,7 @@ impl PipeSolver {
             let mut f = self.velocity.get(x, dim_y - 1);
             f.u = match self.boundary_conditions.y_plus {
                 BoundaryConditions::Reflect => 0.0,
+                BoundaryConditions::Ocean { .. } => f.u,
                 BoundaryConditions::Absorb => f.u,
             };
 
@@ -258,6 +334,15 @@ impl PipeSolver {
                     self.get_w_g_h(x + 1, dim_y - 1),
                     self.get_w_g_h(x, dim_y - 2),
                     self.get_g_h(x, dim_y - 1),
+                ),
+                BoundaryConditions::Ocean { level } => Self::kernel(
+                    f,
+                    self.water.get(x, dim_y - 1),
+                    self.get_w_g_h(x, dim_y - 1),
+                    self.get_w_g_h(x - 1, dim_y - 1),
+                    self.get_w_g_h(x + 1, dim_y - 1),
+                    self.get_w_g_h(x, dim_y - 2),
+                    level,
                 ),
                 BoundaryConditions::Reflect => Self::kernel(
                     f,
@@ -274,18 +359,22 @@ impl PipeSolver {
             let mut f = self.velocity.get(0, 0);
             f.d = match self.boundary_conditions.y_minus {
                 BoundaryConditions::Absorb => f.d,
+                BoundaryConditions::Ocean { .. } => f.d,
                 BoundaryConditions::Reflect => 0.0,
             };
             f.l = match self.boundary_conditions.x_minus {
                 BoundaryConditions::Absorb => f.l,
+                BoundaryConditions::Ocean { .. } => f.l,
                 BoundaryConditions::Reflect => 0.0,
             };
             let wg_xm1y0 = match self.boundary_conditions.x_minus {
                 BoundaryConditions::Absorb => self.get_g_h(0, 0),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(0, 0),
             };
             let wg_x0ym1 = match self.boundary_conditions.y_minus {
                 BoundaryConditions::Absorb => self.get_g_h(0, 0),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(0, 0),
             };
             *new_v.get_mut(0, 0) = Self::kernel(
@@ -302,18 +391,22 @@ impl PipeSolver {
             let mut f = self.velocity.get(dim_x - 1, 0);
             f.d = match self.boundary_conditions.y_minus {
                 BoundaryConditions::Absorb => f.d,
+                BoundaryConditions::Ocean { .. } => f.d,
                 BoundaryConditions::Reflect => 0.0,
             };
             f.r = match self.boundary_conditions.x_plus {
-                BoundaryConditions::Absorb => f.d,
+                BoundaryConditions::Absorb => f.r,
+                BoundaryConditions::Ocean { .. } => f.r,
                 BoundaryConditions::Reflect => 0.0,
             };
             let wg_xp1y0 = match self.boundary_conditions.x_plus {
                 BoundaryConditions::Absorb => self.get_g_h(dim_x - 1, 0),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(dim_x - 1, 0),
             };
             let wg_x0ym1 = match self.boundary_conditions.y_minus {
                 BoundaryConditions::Absorb => self.get_g_h(dim_x - 1, 0),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(dim_x - 1, 0),
             };
             *new_v.get_mut(dim_x - 1, 0) = Self::kernel(
@@ -330,18 +423,22 @@ impl PipeSolver {
             let mut f = self.velocity.get(dim_x - 1, dim_y - 1);
             f.u = match self.boundary_conditions.y_plus {
                 BoundaryConditions::Absorb => f.u,
+                BoundaryConditions::Ocean { .. } => f.u,
                 BoundaryConditions::Reflect => 0.0,
             };
             f.r = match self.boundary_conditions.x_plus {
                 BoundaryConditions::Absorb => f.r,
+                BoundaryConditions::Ocean { .. } => f.r,
                 BoundaryConditions::Reflect => 0.0,
             };
             let wg_xp1y0 = match self.boundary_conditions.x_plus {
                 BoundaryConditions::Absorb => self.get_g_h(dim_x - 1, dim_y - 1),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(dim_x - 2, dim_y - 1),
             };
             let wg_x0yp1 = match self.boundary_conditions.y_plus {
                 BoundaryConditions::Absorb => self.get_g_h(dim_x - 1, dim_y - 1),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(dim_x - 1, dim_y - 1),
             };
             *new_v.get_mut(dim_x - 1, dim_y - 1) = Self::kernel(
@@ -358,18 +455,22 @@ impl PipeSolver {
             let mut f = self.velocity.get(0, dim_y - 1);
             f.u = match self.boundary_conditions.y_plus {
                 BoundaryConditions::Absorb => f.u,
+                BoundaryConditions::Ocean { .. } => f.u,
                 BoundaryConditions::Reflect => 0.0,
             };
             f.l = match self.boundary_conditions.x_minus {
                 BoundaryConditions::Absorb => f.l,
+                BoundaryConditions::Ocean { .. } => f.l,
                 BoundaryConditions::Reflect => 0.0,
             };
             let wg_xm1y0 = match self.boundary_conditions.x_minus {
                 BoundaryConditions::Absorb => self.get_g_h(0, dim_y - 1),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(0, dim_y - 1),
             };
             let wg_x0yp1 = match self.boundary_conditions.y_plus {
                 BoundaryConditions::Absorb => self.get_g_h(0, dim_y - 1),
+                BoundaryConditions::Ocean { level } => level,
                 BoundaryConditions::Reflect => self.get_w_g_h(0, dim_y - 1),
             };
             *new_v.get_mut(0, dim_y - 1) = Self::kernel(
