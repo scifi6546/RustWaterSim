@@ -3,11 +3,15 @@ pub mod aabb;
 mod finite_solver;
 mod pipe_solver;
 mod source;
+mod vector;
 
 pub use aabb::AABBBarrier;
 use bevy::prelude::*;
+use std::{fs::File, io::Write};
+
 pub use finite_solver::FiniteSolver;
 pub use source::Source;
+pub use vector::Vector;
 /// size in x direction of water surface
 /// Does not depend on mesh resolution
 pub const WATER_SIZE: f32 = 6.0;
@@ -42,13 +46,19 @@ impl Default for SolverBoundaryConditions {
         }
     }
 }
+
 #[derive(Clone)]
 pub struct Grid<T: Clone + Copy> {
     points: Vec<T>,
     x: usize,
     y: usize,
 }
-impl<T: Clone + Copy + Default> Grid<T> {
+impl<T: Clone + Copy + Default + Vector> Grid<T> {
+    pub fn debug_save<P: AsRef<std::path::Path>>(&self, save_path: P) {
+        let data = self.numpy_data();
+        let mut file = File::create(save_path).expect("failed to open file");
+        file.write(&data);
+    }
     pub fn from_vec(dimensions: Vector2<usize>, points: Vec<T>) -> Self {
         assert_eq!(dimensions.x * dimensions.y, points.len());
         Self {
@@ -68,6 +78,23 @@ impl<T: Clone + Copy + Default> Grid<T> {
     ///
     pub fn get(&self, x: usize, y: usize) -> T {
         self.points[self.y * x + y]
+    }
+    /// gets value at index or gets other value
+    pub fn get_or(&self, x: i32, y: i32, other_value: T) -> T {
+        if x >= 0 && y >= 0 {
+            let idx = self.get_idx(x as usize, y as usize);
+            if idx < self.points.len() {
+                self.points[idx]
+            } else {
+                other_value
+            }
+        } else {
+            other_value
+        }
+    }
+    /// gets idx of coords
+    fn get_idx(&self, x: usize, y: usize) -> usize {
+        self.y * x + y
     }
     /// gets mut unchecked
     pub fn get_mut(&mut self, x: usize, y: usize) -> &mut T {
@@ -90,6 +117,35 @@ impl<T: Clone + Copy + Default> Grid<T> {
             }
         }
         s
+    }
+    fn numpy_data(&self) -> Vec<u8> {
+        let header_str = format!(
+            "{{'descr': '<f4', 'fortran_order': False, 'shape': ({}, {}, {}), }}",
+            self.x(),
+            self.y(),
+            T::DIM
+        );
+        let header_bytes = header_str.as_bytes();
+        let header_len = header_bytes.len() as u16;
+        let mut out_data = vec![
+            0x93, 'N' as u8, 'U' as u8, 'M' as u8, 'P' as u8, 'Y' as u8, 0x01, 0x00,
+        ];
+        for byte in header_len.to_le_bytes().iter() {
+            out_data.push(*byte);
+        }
+        for byte in header_bytes.iter() {
+            out_data.push(*byte);
+        }
+        for x in 0..self.x() {
+            for y in 0..self.y() {
+                let h = self.get(x, y);
+                for byte in h.to_le_bytes().iter() {
+                    out_data.push(*byte);
+                }
+            }
+        }
+
+        return out_data;
     }
 }
 impl<T: std::ops::Add + std::ops::AddAssign + Clone + Copy> std::ops::Add for Grid<T> {
@@ -125,33 +181,7 @@ pub trait Solver {
         self.water_h().clone() + self.ground_h().clone()
     }
     fn numpy_data(&self) -> Vec<u8> {
-        let water_h = self.water_h();
-        let header_str = format!(
-            "{{'descr': '<f4', 'fortran_order': False, 'shape': ({}, {}), }}",
-            water_h.x(),
-            water_h.y()
-        );
-        let header_bytes = header_str.as_bytes();
-        let header_len = header_bytes.len() as u16;
-        let mut out_data = vec![
-            0x93, 'N' as u8, 'U' as u8, 'M' as u8, 'P' as u8, 'Y' as u8, 0x01, 0x00,
-        ];
-        for byte in header_len.to_le_bytes().iter() {
-            out_data.push(*byte);
-        }
-        for byte in header_bytes.iter() {
-            out_data.push(*byte);
-        }
-        for x in 0..water_h.x() {
-            for y in 0..water_h.y() {
-                let h = water_h.get(x, y);
-                for byte in h.to_ne_bytes().iter() {
-                    out_data.push(*byte);
-                }
-            }
-        }
-
-        return out_data;
+        self.water_h().numpy_data()
     }
     fn mean_height(&self) -> f32 {
         let mut sum = 0.0;

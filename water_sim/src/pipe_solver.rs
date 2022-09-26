@@ -1,10 +1,12 @@
 use super::{
     AABBBarrier, BoundaryConditions, Grid, SolveInfo, Solver, SolverBoundaryConditions, Source,
+    Vector,
 };
 use bevy::prelude::Component;
 use nalgebra::Vector2;
 /// used https://github.com/bshishov/UnityTerrainErosionGPU as reference
 #[derive(Clone, Copy)]
+#[repr(C)]
 struct Pipes {
     l: f32,
     r: f32,
@@ -19,6 +21,17 @@ impl Default for Pipes {
             u: 0.0,
             d: 0.0,
         }
+    }
+}
+impl Vector for Pipes {
+    const DIM: usize = 1;
+
+    fn to_le_bytes(&self) -> Vec<u8> {
+        todo!()
+    }
+
+    fn from_le_bytes(bytes: &[u8]) -> Self {
+        todo!()
     }
 }
 #[derive(Component)]
@@ -84,7 +97,14 @@ impl PipeSolver {
     fn get_g_h(&self, x: usize, y: usize) -> f32 {
         self.ground.get(x, y)
     }
-
+    fn get_slope(g: &Grid<f32>, x: usize, y: usize) -> f32 {
+        let height = g.get(x, y);
+        (height - g.get_or(x as i32 - 1, y as i32, height))
+            .abs()
+            .max((height - g.get_or(x as i32 + 1, y as i32, height)).abs())
+            .max((height - g.get_or(x as i32, y as i32 - 1, height)).abs())
+            .max((height - g.get_or(x as i32, y as i32 + 1, height)).abs())
+    }
     fn get_w_g_h(&self, x: usize, y: usize) -> f32 {
         self.water.get(x, y) + self.get_g_h(x, y)
     }
@@ -94,13 +114,22 @@ impl PipeSolver {
         let dim_x = self.water.x();
         let dim_y = self.water.y();
         let mut water_new = self.water.clone();
+        if self.t == 10 {
+            println!("saving ground");
+            self.ground.debug_save("ground.npy");
+            let slope = Grid::from_fn(
+                |x, y| Self::get_slope(&self.ground, x, y),
+                Vector2::new(self.dim_x(), self.dim_y()),
+            );
+            slope.debug_save("slope.np");
+        }
         for x in 0..dim_x {
             for y in 0..dim_y {
                 let pipe = self.velocity.get(x, y);
 
                 let v = (pipe.r.powi(2) + pipe.l.powi(2) + pipe.d.powi(2) + pipe.u.powi(2)).sqrt();
                 // max concentration to take
-                let cap = softness * v;
+                let cap = (softness * v).min(0.01) * Self::get_slope(&self.ground, x, y);
                 let to_take =
                     (cap - self.dissolved_ground.get(x, y)) * Self::DELTA_T * GROUND_DELTA_T;
                 *self.ground.get_mut(x, y) -= to_take;
