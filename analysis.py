@@ -19,6 +19,10 @@ for x in range(0,vel.shape[0]):
         vector = vel[x,y]
         u.append(vector[0])
         v.append(vector[1])
+u = np.array(u)
+v = np.array(v)
+print(u.shape)
+print(v.shape)
 plt.quiver(x,y,u,v)
 plt.show()
 print("hello")
