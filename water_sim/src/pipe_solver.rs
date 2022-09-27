@@ -109,6 +109,11 @@ impl PipeSolver {
         self.water.get(x, y) + self.get_g_h(x, y)
     }
     fn solve_erode(&mut self) {
+        fn get_velocity(pipe: &Pipes) -> Vector2<f32> {
+            let x = pipe.r - pipe.l;
+            let y = pipe.u - pipe.d;
+            Vector2::new(x, y)
+        }
         const GROUND_DELTA_T: f32 = 0.5;
         let softness = 0.1;
         let dim_x = self.water.x();
@@ -117,10 +122,12 @@ impl PipeSolver {
         if self.t == 10 {
             println!("saving ground");
             self.ground.debug_save("ground.npy");
-            let slope = Grid::from_fn(
-                |x, y| Self::get_slope(&self.ground, x, y),
-                Vector2::new(self.dim_x(), self.dim_y()),
-            );
+            let dimensions = Vector2::new(self.dim_x(), self.dim_y());
+            let slope = Grid::from_fn(|x, y| Self::get_slope(&self.ground, x, y), dimensions);
+            let velocity_grid =
+                Grid::from_fn(|x, y| get_velocity(&self.velocity.get(x, y)), dimensions);
+            velocity_grid.debug_save("velocity.np");
+
             slope.debug_save("slope.np");
         }
         for x in 0..dim_x {
