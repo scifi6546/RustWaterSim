@@ -67,7 +67,7 @@ impl Solver for PipeSolver {
     fn solve(&mut self, _boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.solve_pipe();
         self.solve_erode();
-        //  self.debug_save();
+        self.debug_save();
         (&self.water, vec![])
     }
 
@@ -124,6 +124,10 @@ impl PipeSolver {
 
             let water_name = format!("water_{}.np", self.t);
             self.water.debug_save(save_dir.join(water_name));
+
+            let dissolved_grid = Grid::from_fn(|x, y| self.dissolved_ground.get(x, y), dimensions);
+            let dissolve_name = format!("dissolved_{}.np", self.t);
+            dissolved_grid.debug_save(save_dir.join(dissolve_name));
         }
     }
     fn get_slope(g: &Grid<f32>, x: usize, y: usize) -> f32 {

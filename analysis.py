@@ -31,7 +31,7 @@ def make_quiver():
 
 
 def make_water_img():
-    water_path = Path("debug_data/water_10.np")
+    water_path = Path("debug_data/dissolved_10.np")
     data = np.load(str(water_path))
     return ax.imshow(data)
 
@@ -68,7 +68,7 @@ def print_velocity(file_path):
 def animate(i):
     slope_path = Path("debug_data/velocity_{}.np".format(i*10))
     if slope_path.exists():
-        water = np.load(str(Path("debug_data/water_{}.np".format(i*10))))
+        water = np.load(str(Path("debug_data/dissolved_{}.np".format(i*10))))
         img.set_data(water)
 
         print(i)
@@ -80,5 +80,5 @@ def animate(i):
 
 
 print("fig made")
-anim = FuncAnimation(fig, animate, init_func=init, frames=673,interval=200)
-anim.save("test.mp4")
+anim = FuncAnimation(fig, animate, init_func=init, frames=673, interval=20)
+anim.save("test.gif")
