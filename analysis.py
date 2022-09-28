@@ -2,61 +2,83 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
 from pathlib import Path
-vel = np.load("velocity.np")
 
-slope_path = Path("debug_data/velocity_10.np")
-data = np.load(slope_path)
-x_arr = []
-y_arr = []
-u = []
-v = []
-for x in range(0,data.shape[0]):
-    for y in range(0,data.shape[1]):
-        if x%10==0 and y%10==0:
-            x_arr.append(float(x))
-            y_arr.append(float(y))
-            u.append(0.0)
-            v.append(0.0)
-quiver = plt.quiver(x_arr,y_arr,u,v)
-print("made quiver")
-def init():
-    return quiver
-def print_velocity(file_path):
-    SCALE=1.0
-    data = np.load(file_path)
+SKIP_INTERVAL = 5
+SCALE = 0.1
+
+
+fig = plt.figure(figsize=(14,18))
+ax = plt.axes()
+
+DATA_LEN = 0
+
+def make_quiver():
     x_arr = []
     y_arr = []
     u = []
     v = []
+    slope_path = Path("debug_data/velocity_10.np")
+    data = np.load(slope_path)
     for x in range(0,data.shape[0]):
         for y in range(0,data.shape[1]):
-            if x % 10 == 0 and y % 10 == 0:
-                x_arr.append(x)
-                y_arr.append(y)
-                vector = SCALE*vel[x,y]
+            if x % SKIP_INTERVAL == 0 and y % SKIP_INTERVAL == 0:
+                x_arr.append(float(x))
+                y_arr.append(float(y))
+                u.append(0.01)
+                v.append(0.01)
+    DATA_LEN = len(x_arr)
+    return ax.quiver(y_arr,x_arr,u,v,scale=0.01, width=0.01)
+
+
+def make_water_img():
+    water_path = Path("debug_data/water_10.np")
+    data = np.load(str(water_path))
+    return ax.imshow(data)
+
+
+quiver = make_quiver()
+img = make_water_img()
+
+def init():
+    return quiver
+
+
+def print_velocity(file_path):
+    data = np.load(file_path)
+    u = []
+    v = []
+
+    for x in range(0, data.shape[0]):
+        for y in range(0, data.shape[1]):
+            if x % SKIP_INTERVAL == 0 and y % SKIP_INTERVAL == 0:
+                vector = data[x, y]
 
                 u.append(vector[0])
                 v.append(vector[1])
-    x_arr = np.array(x_arr)
-    y_arr = np.array(y_arr)
+
     u = np.array(u)
     v = np.array(v)
+    mags = np.sqrt(np.power(u, 2.0)+np.power(v, 2.0))
+    print("max velocity: {}".format(np.max(mags)))
 
-    quiver.set_UVC(u,v)
+    quiver.set_UVC(v , u)
     return quiver
 
 
 def animate(i):
     slope_path = Path("debug_data/velocity_{}.np".format(i*10))
-    print(i)
     if slope_path.exists():
+        water = np.load(str(Path("debug_data/water_{}.np".format(i*10))))
+        img.set_data(water)
+
+        print(i)
         q = print_velocity(slope_path)
         return q
     else:
         return quiver
 
 
-fig = plt.figure()
+
 print("fig made")
-anim = FuncAnimation(fig, animate, init_func=init, frames=13,interval=1)
+anim = FuncAnimation(fig, animate, init_func=init, frames=673,interval=200)
 anim.save("test.mp4")

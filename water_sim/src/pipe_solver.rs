@@ -67,7 +67,7 @@ impl Solver for PipeSolver {
     fn solve(&mut self, _boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.solve_pipe();
         self.solve_erode();
-        self.debug_save();
+        //  self.debug_save();
         (&self.water, vec![])
     }
 
@@ -98,27 +98,32 @@ impl PipeSolver {
     fn get_g_h(&self, x: usize, y: usize) -> f32 {
         self.ground.get(x, y)
     }
+    fn get_velocity(pipe: &Pipes) -> Vector2<f32> {
+        let x = pipe.l - pipe.r;
+        let y = pipe.d - pipe.u;
+        Vector2::new(x, y)
+    }
     fn debug_save(&self) {
-        fn get_velocity(pipe: &Pipes) -> Vector2<f32> {
-            let x = pipe.r - pipe.l;
-            let y = pipe.u - pipe.d;
-            Vector2::new(x, y)
-        }
         if self.t % 10 == 0 {
             let save_dir = std::path::PathBuf::from("./debug_data");
-            std::fs::create_dir_all(&save_dir);
+            std::fs::create_dir_all(&save_dir).expect("failed to create dir");
             println!("saving ground");
             let ground_name = format!("ground_{}.np", self.t);
             self.ground
                 .debug_save(save_dir.as_path().join(&ground_name));
             let dimensions = Vector2::new(self.dim_x(), self.dim_y());
             let slope = Grid::from_fn(|x, y| Self::get_slope(&self.ground, x, y), dimensions);
-            let velocity_grid =
-                Grid::from_fn(|x, y| get_velocity(&self.velocity.get(x, y)), dimensions);
+            let velocity_grid = Grid::from_fn(
+                |x, y| Self::get_velocity(&self.velocity.get(x, y)),
+                dimensions,
+            );
             let velocity_name = format!("velocity_{}.np", self.t);
             velocity_grid.debug_save(save_dir.join(&velocity_name));
             let slope_name = format!("slope_{}.np", self.t);
             slope.debug_save(save_dir.join(&slope_name));
+
+            let water_name = format!("water_{}.np", self.t);
+            self.water.debug_save(save_dir.join(water_name));
         }
     }
     fn get_slope(g: &Grid<f32>, x: usize, y: usize) -> f32 {
@@ -143,7 +148,7 @@ impl PipeSolver {
             for y in 0..dim_y {
                 let pipe = self.velocity.get(x, y);
 
-                let v = (pipe.r.powi(2) + pipe.l.powi(2) + pipe.d.powi(2) + pipe.u.powi(2)).sqrt();
+                let v = Self::get_velocity(&pipe).magnitude();
                 // max concentration to take
                 let cap = (softness * v).min(0.01) * Self::get_slope(&self.ground, x, y);
                 let to_take =
