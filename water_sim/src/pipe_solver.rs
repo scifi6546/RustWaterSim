@@ -93,8 +93,9 @@ impl Solver for PipeSolver {
 impl PipeSolver {
     const L_X: f32 = 1.0;
     const L_Y: f32 = 1.0;
-    const DELTA_T: f32 = 0.01;
+    const DELTA_T: f32 = 0.1;
     const G: f32 = 9.81;
+    const DEBUG_INTERVAL: u32 = 1;
     fn get_g_h(&self, x: usize, y: usize) -> f32 {
         self.ground.get(x, y)
     }
@@ -104,7 +105,7 @@ impl PipeSolver {
         Vector2::new(x, y)
     }
     fn debug_save(&self) {
-        if self.t % 10 == 0 {
+        if self.t % Self::DEBUG_INTERVAL == 0 {
             let save_dir = std::path::PathBuf::from("./debug_data");
             std::fs::create_dir_all(&save_dir).expect("failed to create dir");
             println!("saving ground");
