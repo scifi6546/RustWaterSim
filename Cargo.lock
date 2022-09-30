@@ -402,6 +402,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "game_plugin",
+ "grid",
  "winit",
 ]
 
@@ -1829,6 +1830,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "363e3677e55ad168fef68cf9de3a4a310b53124c5e784c53a1d70e92d23f2126"
 dependencies = [
  "bitflags",
+]
+
+[[package]]
+name = "grid"
+version = "0.1.0"
+dependencies = [
+ "nalgebra",
 ]
 
 [[package]]
@@ -3477,6 +3485,7 @@ name = "water_sim"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "grid",
  "nalgebra",
 ]
 

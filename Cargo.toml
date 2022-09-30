@@ -26,4 +26,5 @@ members = ["launchers/native","launchers/wasm","game_plugin"]
 bevy = { version = "0.8.1" }
 winit = "0.26.1"
 game_plugin = { path = "game_plugin" }
+grid = {path = "grid"}
 
