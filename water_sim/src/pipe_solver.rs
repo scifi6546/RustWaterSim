@@ -34,6 +34,25 @@ impl Vector for Pipes {
         todo!()
     }
 }
+struct DebugBuffer<T: Copy + Clone + Vector> {
+    items: Vec<Grid<T>>,
+    buffer_size: u32,
+    current_idx: u32,
+}
+impl<T: Copy + Clone + Vector> DebugBuffer<T> {
+    pub fn new(buffer_size: u32, initial_grid: Grid<T>) -> Self {
+        Self {
+            items: vec![initial_grid],
+            buffer_size,
+            current_idx: 0,
+        }
+    }
+    pub fn save<P: AsRef<std::path::Path>>(&self, save_path: P) {
+        let mut save_vec = Vec::new();
+        let mut idx = self.current_idx;
+        loop {}
+    }
+}
 #[derive(Component)]
 pub struct PipeSolver {
     water: Grid<f32>,

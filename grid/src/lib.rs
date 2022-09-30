@@ -1,6 +1,6 @@
 mod vector;
 use nalgebra::Vector2;
-use std::{fs::File, io::Write};
+use std::{fs::File, io::Write, path::Path};
 pub use vector::Vector;
 #[derive(Clone)]
 pub struct Grid<T: Clone + Copy> {
@@ -9,7 +9,27 @@ pub struct Grid<T: Clone + Copy> {
     y: usize,
 }
 impl<T: Clone + Copy + Default + Vector> Grid<T> {
-    pub fn debug_save<P: AsRef<std::path::Path>>(&self, save_path: P) {
+    pub fn save_several_layers<P: AsRef<Path>>(save_path: P, grid_layers: &[Grid<T>]) {
+        let mut data = Self::make_header([
+            grid_layers.len() as u32,
+            grid_layers[0].x() as u32,
+            grid_layers[0].y() as u32,
+            T::DIM as u32,
+        ]);
+        for layer in grid_layers {
+            for x in 0..layer.x() {
+                for y in 0..layer.y() {
+                    let item = layer.get(x, y);
+                    for byte in item.to_le_bytes().iter() {
+                        data.push(*byte);
+                    }
+                }
+            }
+        }
+        let mut file = File::create(save_path).expect("failed to open file");
+        file.write(&data);
+    }
+    pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) {
         let data = self.numpy_data();
         let mut file = File::create(save_path).expect("failed to open file");
         file.write(&data);
@@ -73,24 +93,31 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         }
         s
     }
-    pub fn numpy_data(&self) -> Vec<u8> {
+    fn make_header<const SIZE: usize>(shape: [u32; SIZE]) -> Vec<u8> {
+        let mut shape_str = String::new();
+        for i in 0..SIZE - 1 {
+            shape_str += &format!("{}, ", shape[i]);
+        }
+        shape_str += &format!("{}", shape[SIZE - 1]);
         let header_str = format!(
-            "{{'descr': '<f4', 'fortran_order': False, 'shape': ({}, {}, {}), }}",
-            self.x(),
-            self.y(),
-            T::DIM
+            "{{'descr': '<f4', 'fortran_order': False, 'shape': ({}), }}",
+            shape_str
         );
-        let header_bytes = header_str.as_bytes();
-        let header_len = header_bytes.len() as u16;
         let mut out_data = vec![
             0x93, 'N' as u8, 'U' as u8, 'M' as u8, 'P' as u8, 'Y' as u8, 0x01, 0x00,
         ];
+        let header_bytes = header_str.as_bytes();
+        let header_len = header_bytes.len() as u16;
         for byte in header_len.to_le_bytes().iter() {
             out_data.push(*byte);
         }
         for byte in header_bytes.iter() {
             out_data.push(*byte);
         }
+        out_data
+    }
+    pub fn numpy_data(&self) -> Vec<u8> {
+        let mut out_data = Self::make_header([self.x() as u32, self.y() as u32, T::DIM as u32]);
         for x in 0..self.x() {
             for y in 0..self.y() {
                 let h = self.get(x, y);
