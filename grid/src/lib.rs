@@ -9,7 +9,7 @@ pub struct Grid<T: Clone + Copy> {
     y: usize,
 }
 impl<T: Clone + Copy + Default + Vector> Grid<T> {
-    pub fn save_several_layers<P: AsRef<Path>>(save_path: P, grid_layers: &[Grid<T>]) {
+    pub fn save_several_layers<P: AsRef<Path>>(save_path: P, grid_layers: &[&Grid<T>]) {
         let mut data = Self::make_header([
             grid_layers.len() as u32,
             grid_layers[0].x() as u32,

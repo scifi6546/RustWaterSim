@@ -34,28 +34,52 @@ impl Vector for Pipes {
         todo!()
     }
 }
-struct DebugBuffer<T: Copy + Clone + Vector> {
+struct DebugBuffer<T: Copy + Clone + Vector + Default> {
     items: Vec<Grid<T>>,
     buffer_size: u32,
     current_idx: u32,
 }
-impl<T: Copy + Clone + Vector> DebugBuffer<T> {
-    pub fn new(buffer_size: u32, initial_grid: Grid<T>) -> Self {
+impl<T: Copy + Clone + Vector + Default> DebugBuffer<T> {
+    pub fn new(buffer_size: u32) -> Self {
         Self {
-            items: vec![initial_grid],
+            items: vec![],
             buffer_size,
             current_idx: 0,
         }
     }
+    pub fn push(&mut self, grid: Grid<T>) {
+        if (self.items.len() as u32) < self.buffer_size {
+            self.items.push(grid);
+        } else if (self.items.len() as u32) == self.buffer_size {
+            let new_idx = (self.current_idx as u32 + 1) % self.buffer_size;
+            self.items[new_idx as usize] = grid;
+            self.current_idx = new_idx;
+        } else {
+            panic!(
+                "invalid state, buffer length: {} is greater then max buffer size: {}",
+                self.items.len(),
+                self.buffer_size
+            );
+        }
+    }
     pub fn save<P: AsRef<std::path::Path>>(&self, save_path: P) {
-        let mut save_vec = Vec::new();
-        let mut idx = self.current_idx;
-        loop {}
+        let mut save_vec = vec![&self.items[self.current_idx as usize]];
+        let mut idx = (self.current_idx + 1) % self.buffer_size;
+        loop {
+            if idx == self.current_idx || idx >= self.items.len() as u32 {
+                break;
+            }
+
+            save_vec.push(&self.items[idx as usize]);
+            idx = (idx + 1) % self.buffer_size;
+        }
+        Grid::save_several_layers(save_path, &save_vec);
     }
 }
 #[derive(Component)]
 pub struct PipeSolver {
     water: Grid<f32>,
+    water_debug_buffer: DebugBuffer<f32>,
     velocity: Grid<Pipes>,
     ground: Grid<f32>,
     dissolved_ground: Grid<f32>,
@@ -74,6 +98,7 @@ impl Solver for PipeSolver {
         let dimensions = Vector2::new(water.x(), water.y());
         Self {
             water,
+            water_debug_buffer: DebugBuffer::new(Self::DEBUG_INTERVAL as u32),
             velocity: Grid::from_fn(|_, _| Pipes::default(), dimensions),
             ground,
             dissolved_ground: Grid::from_fn(|_, _| 0.0, dimensions),
@@ -86,6 +111,7 @@ impl Solver for PipeSolver {
     fn solve(&mut self, _boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.solve_pipe();
         self.solve_erode();
+        self.water_debug_buffer.push(self.water.clone());
         self.debug_save();
         (&self.water, vec![])
     }
@@ -114,7 +140,7 @@ impl PipeSolver {
     const L_Y: f32 = 1.0;
     const DELTA_T: f32 = 0.1;
     const G: f32 = 9.81;
-    const DEBUG_INTERVAL: u32 = 1;
+    const DEBUG_INTERVAL: u32 = 10;
     fn get_g_h(&self, x: usize, y: usize) -> f32 {
         self.ground.get(x, y)
     }
@@ -143,7 +169,7 @@ impl PipeSolver {
             slope.debug_save(save_dir.join(&slope_name));
 
             let water_name = format!("water_{}.np", self.t);
-            self.water.debug_save(save_dir.join(water_name));
+            self.water_debug_buffer.save(save_dir.join(water_name));
 
             let dissolved_grid = Grid::from_fn(|x, y| self.dissolved_ground.get(x, y), dimensions);
             let dissolve_name = format!("dissolved_{}.np", self.t);
