@@ -19,7 +19,7 @@ edition = "2021"
 name = "native"
 path = "launchers/native/src/main.rs"
 [workspace]
-members = ["launchers/native","launchers/wasm","game_plugin"]
+members = ["launchers/native","launchers/wasm","game_plugin","py_watersim"]
 
 
 [dependencies]
