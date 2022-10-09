@@ -2966,6 +2966,8 @@ dependencies = [
 name = "py_watersim"
 version = "0.1.0"
 dependencies = [
+ "grid",
+ "nalgebra",
  "pyo3",
 ]
 
