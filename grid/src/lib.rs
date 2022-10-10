@@ -444,5 +444,34 @@ mod test {
         let g_out_y = g_out[0].y();
         assert_eq!(g_out_x, dimensions.x);
         assert_eq!(g_out_y, dimensions.y);
+        std::fs::remove_file("test").expect("failed to delete");
+    }
+    #[test]
+    fn test_big_grid() {
+        let dimensions = Vector2::new(100, 200);
+        let g = Grid::from_fn(|x, y| (x as f32).powi(2) + y as f32, dimensions);
+        let g_layers: Vec<Grid<f32>> = (0..3)
+            .map(|l| Grid::from_fn(|x, y| (x as f32).powi(2) + y as f32 + l as f32, dimensions))
+            .collect();
+        let g_layers_ref: Vec<&Grid<f32>> = g_layers.iter().map(|g| g).collect();
+        let mut write: Vec<u8> = Vec::new();
+        Grid::save_several_layers_writer(&mut std::io::Cursor::new(&mut write), &g_layers_ref)
+            .expect("failed to write");
+        let g_load_arr: Vec<Grid<f32>> =
+            Grid::load_layers_reader(&mut std::io::Cursor::new(&write)).expect("failed to load");
+        assert_eq!(g_layers.len(), g_load_arr.len());
+        for i in 0..g_layers.len() {
+            assert_eq!(g_layers[i].x(), g_load_arr[i].x());
+            assert_eq!(g_layers[i].y(), g_load_arr[i].y());
+            let dim_x = g_layers[i].x();
+            let dim_y = g_layers[i].y();
+            for x in 0..dim_x {
+                for y in 0..dim_y {
+                    let diff = g_layers[i].get(x, y) - g_load_arr[i].get(x, y);
+                    assert!(diff.abs() < 0.01);
+                }
+            }
+        }
+        assert_eq!(g_load_arr.len(), 3)
     }
 }
