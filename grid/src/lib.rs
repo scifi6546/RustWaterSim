@@ -1,12 +1,12 @@
 mod vector;
 use nalgebra::Vector2;
-use std::str::{from_utf8, from_utf8_unchecked};
+
 use std::{
     collections::HashMap,
     fs::File,
     io::{Error as IoError, Read, Write},
     path::Path,
-    str::Utf8Error,
+    str::{from_utf8, Utf8Error},
 };
 
 use thiserror::Error;
@@ -62,8 +62,12 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
             Ok(())
         }
     }
-    /// loads several layers saved as numpy array
     pub fn load_layers<P: AsRef<Path>>(path: P) -> Result<Vec<Self>, ParseError> {
+        let mut f = File::open(path)?;
+        Self::load_layers_reader(&mut f)
+    }
+    /// loads several layers saved as numpy array
+    pub fn load_layers_reader<R: Read>(reader: &mut R) -> Result<Vec<Self>, ParseError> {
         fn de_quote(s: &str) -> Result<&str, ParseError> {
             let s = s.trim();
             let start_char = s.chars().next();
@@ -124,9 +128,9 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
             }
             return Err(ParseError::InvalidHeaderJson);
         }
-        let mut f = File::open(path)?;
+
         let mut buffer = Vec::new();
-        f.read_to_end(&mut buffer)?;
+        reader.read_to_end(&mut buffer)?;
         let numpy_str = from_utf8(&buffer[1..6])?;
         if numpy_str != "NUMPY" {
             return Err(ParseError::InvalidHeader);
@@ -138,8 +142,8 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         let header_end_idx = buffer[11..]
             .iter()
             .enumerate()
-            .filter(|(a, b)| **b == '}' as u8)
-            .map(|(idx, byte)| idx + header_start_offset)
+            .filter(|(_idx, byte)| **byte == '}' as u8)
+            .map(|(idx, _byte)| idx + header_start_offset)
             .next();
         if header_end_idx.is_none() {
             return Err(ParseError::InvalidHeader);
@@ -250,13 +254,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         );
 
         let copy_buffer = &buffer[header_end_idx + 1..buffer.len()];
-        let num_layers = if shape_tuple.len() == 4 {
-            shape_tuple[0]
-        } else if shape_tuple.len() == 3 {
-            1
-        } else {
-            return Err(ParseError::InvalidHeaderJson);
-        };
+
         let (num_layers, size_x, size_y, num_channels) = if shape_tuple.len() == 4 {
             (
                 shape_tuple[0] as usize,
@@ -307,10 +305,11 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         }
         Ok(grids)
     }
-    pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) {
+    pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) -> Result<(), ParseError> {
         let data = self.numpy_data();
         let mut file = File::create(save_path).expect("failed to open file");
-        file.write(&data);
+        file.write(&data)?;
+        Ok(())
     }
     pub fn from_vec(dimensions: Vector2<usize>, points: Vec<T>) -> Self {
         assert_eq!(dimensions.x * dimensions.y, points.len());
