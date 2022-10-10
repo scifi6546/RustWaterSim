@@ -32,7 +32,15 @@ pub struct Grid<T: Clone + Copy> {
 }
 impl<T: Clone + Copy + Default + Vector> Grid<T> {
     pub fn save_several_layers<P: AsRef<Path>>(
-        save_path: P,
+        path: P,
+        grid_layers: &[&Grid<T>],
+    ) -> Result<(), ParseError> {
+        let mut file = File::create(path)?;
+        let _ = Self::save_several_layers_writer(&mut file, grid_layers)?;
+        Ok(())
+    }
+    pub fn save_several_layers_writer<W: Write>(
+        writer: &mut W,
         grid_layers: &[&Grid<T>],
     ) -> std::io::Result<()> {
         let mut data = Self::make_header([
@@ -51,8 +59,8 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                 }
             }
         }
-        let mut file = File::create(save_path)?;
-        let s = file.write(&data)?;
+
+        let s = writer.write(&data)?;
         if s != data.len() {
             Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
