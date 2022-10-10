@@ -60,16 +60,13 @@ impl PyGridLayers {
             }
             self.layers.push(grid.grid)
         }
-        return Err(StackError::InvalidDimensions {
-            old_x: 0,
-            new_x: 0,
-            old_y: 0,
-            new_y: 0,
-        });
+        Ok(())
     }
 }
+#[pyfunction]
 fn load_stack(p: &str) -> PyResult<PyGridLayers> {
-    todo!()
+    let layers = Grid::load_layers(Path::new(p))?;
+    Ok(PyGridLayers { layers })
 }
 #[derive(Clone)]
 #[pyclass(name = "Grid")]

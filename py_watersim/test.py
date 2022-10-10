@@ -1,5 +1,5 @@
 import unittest
-from py_watersim import Grid, GridStack,load_grid
+from py_watersim import Grid, GridStack,load_stack
 
 
 class Test(unittest.TestCase):
@@ -16,7 +16,7 @@ class Test(unittest.TestCase):
         s.push_grid(g)
         s.save("stack")
 
-        g_2 = load_grid("stack")
+        g_2 = load_stack("stack")
 
 
 
