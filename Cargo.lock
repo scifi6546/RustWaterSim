@@ -1950,6 +1950,7 @@ name = "grid"
 version = "0.1.0"
 dependencies = [
  "nalgebra",
+ "zip",
 ]
 
 [[package]]
@@ -3699,7 +3700,6 @@ dependencies = [
  "bevy",
  "grid",
  "nalgebra",
- "zip",
 ]
 
 [[package]]

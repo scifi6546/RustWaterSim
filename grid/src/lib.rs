@@ -2,6 +2,7 @@ mod vector;
 use nalgebra::Vector2;
 use std::{fs::File, io::Write, path::Path};
 pub use vector::Vector;
+use zip::{write::FileOptions as WriterFileOptions, ZipWriter};
 #[derive(Clone)]
 pub struct Grid<T: Clone + Copy> {
     points: Vec<T>,
@@ -26,8 +27,16 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                 }
             }
         }
+
         let mut file = File::create(save_path).expect("failed to open file");
-        file.write(&data);
+        let mut zip_writer = ZipWriter::new(file);
+        let options =
+            WriterFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+        zip_writer
+            .start_file("0", options)
+            .expect("failed to start file");
+        zip_writer.write(&data).expect("failed to write data");
+        zip_writer.finish().expect("failed to finish write");
     }
     pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) {
         let data = self.numpy_data();

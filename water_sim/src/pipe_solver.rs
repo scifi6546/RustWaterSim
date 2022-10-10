@@ -4,6 +4,7 @@ use super::{
 };
 use bevy::prelude::Component;
 use nalgebra::Vector2;
+
 /// used https://github.com/bshishov/UnityTerrainErosionGPU as reference
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -81,8 +82,11 @@ pub struct PipeSolver {
     water: Grid<f32>,
     water_debug_buffer: DebugBuffer<f32>,
     velocity: Grid<Pipes>,
+    velocity_debug_buffer: DebugBuffer<Vector2<f32>>,
     ground: Grid<f32>,
+    ground_debug_buffer: DebugBuffer<f32>,
     dissolved_ground: Grid<f32>,
+    dissolved_ground_debug_buffer: DebugBuffer<f32>,
     sources: Vec<Source>,
     boundary_conditions: SolverBoundaryConditions,
     t: u32,
@@ -100,8 +104,11 @@ impl Solver for PipeSolver {
             water,
             water_debug_buffer: DebugBuffer::new(Self::DEBUG_INTERVAL as u32),
             velocity: Grid::from_fn(|_, _| Pipes::default(), dimensions),
+            velocity_debug_buffer: DebugBuffer::new(Self::DEBUG_INTERVAL as u32),
             ground,
+            ground_debug_buffer: DebugBuffer::new(Self::DEBUG_INTERVAL as u32),
             dissolved_ground: Grid::from_fn(|_, _| 0.0, dimensions),
+            dissolved_ground_debug_buffer: DebugBuffer::new(Self::DEBUG_INTERVAL as u32),
             sources,
             boundary_conditions,
             t: 0,
@@ -111,7 +118,7 @@ impl Solver for PipeSolver {
     fn solve(&mut self, _boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.solve_pipe();
         self.solve_erode();
-        self.water_debug_buffer.push(self.water.clone());
+
         self.debug_save();
         (&self.water, vec![])
     }
@@ -149,31 +156,40 @@ impl PipeSolver {
         let y = pipe.d - pipe.u;
         Vector2::new(x, y)
     }
-    fn debug_save(&self) {
+    fn debug_save(&mut self) {
+        self.water_debug_buffer.push(self.water.clone());
+        self.velocity_debug_buffer.push(Grid::from_fn(
+            |x, y| Self::get_velocity(&self.velocity.get(x, y)),
+            Vector2::new(self.dim_x(), self.dim_y()),
+        ));
+        self.ground_debug_buffer.push(self.ground.clone());
+        self.dissolved_ground_debug_buffer
+            .push(self.dissolved_ground.clone());
+
         if self.t % Self::DEBUG_INTERVAL == 0 {
             let save_dir = std::path::PathBuf::from("./debug_data");
             std::fs::create_dir_all(&save_dir).expect("failed to create dir");
             println!("saving ground");
-            let ground_name = format!("ground_{}.np", self.t);
-            self.ground
-                .debug_save(save_dir.as_path().join(&ground_name));
+            let ground_name = format!("ground_{}.npz", self.t);
+            self.ground_debug_buffer
+                .save(save_dir.as_path().join(&ground_name));
             let dimensions = Vector2::new(self.dim_x(), self.dim_y());
             let slope = Grid::from_fn(|x, y| Self::get_slope(&self.ground, x, y), dimensions);
-            let velocity_grid = Grid::from_fn(
-                |x, y| Self::get_velocity(&self.velocity.get(x, y)),
-                dimensions,
-            );
-            let velocity_name = format!("velocity_{}.np", self.t);
-            velocity_grid.debug_save(save_dir.join(&velocity_name));
-            let slope_name = format!("slope_{}.np", self.t);
-            slope.debug_save(save_dir.join(&slope_name));
 
-            let water_name = format!("water_{}.np", self.t);
+            let velocity_name = format!("velocity_{}.npz", self.t);
+            self.velocity_debug_buffer
+                .save(save_dir.join(&velocity_name));
+
+            //let slope_name = format!("slope_{}.np", self.t);
+            //slope.debug_save(save_dir.join(&slope_name));
+
+            let water_name = format!("water_{}.npz", self.t);
             self.water_debug_buffer.save(save_dir.join(water_name));
 
-            let dissolved_grid = Grid::from_fn(|x, y| self.dissolved_ground.get(x, y), dimensions);
-            let dissolve_name = format!("dissolved_{}.np", self.t);
-            dissolved_grid.debug_save(save_dir.join(dissolve_name));
+            let dissolve_name = format!("dissolved_{}.npz", self.t);
+
+            self.dissolved_ground_debug_buffer
+                .save(save_dir.join(dissolve_name));
         }
     }
     fn get_slope(g: &Grid<f32>, x: usize, y: usize) -> f32 {

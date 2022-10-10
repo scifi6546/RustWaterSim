@@ -2,5 +2,9 @@ target/
 .idea/
 .cargo/
 .DS_Store
+test.gif
+test.mp4
 
 build/web/
+dev_venv
+debug_data
