@@ -1,4 +1,6 @@
+mod debug_buffer;
 mod vector;
+
 use nalgebra::Vector2;
 
 use std::{
@@ -9,6 +11,7 @@ use std::{
     str::{from_utf8, Utf8Error},
 };
 
+pub use debug_buffer::DebugBuffer;
 use thiserror::Error;
 pub use vector::Vector;
 #[derive(Error, Debug)]
@@ -86,7 +89,6 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         }
         fn parse_tuple(tuple_str: &str) -> Result<Vec<u32>, ParseError> {
             let tuple_str = tuple_str.trim();
-            println!("tuple to parse: \"{}\"", tuple_str);
             let mut is_first_char = true;
             let mut current_num = 0u32;
             let mut out_vec = Vec::new();
@@ -157,10 +159,9 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
             return Err(ParseError::InvalidHeader);
         }
         let header_end_idx = header_end_idx.unwrap();
-        println!("end idx: {:?}", header_end_idx);
+
         let dim_str = from_utf8(&buffer[10..header_end_idx + 1])?;
 
-        println!("start\n{}", dim_str);
         let mut items: HashMap<String, String> = HashMap::new();
         {
             let mut in_str = false;
@@ -199,19 +200,12 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                     data.clear();
                 } else if c == '(' {
                     if in_name || !in_data || data.trim() != "" {
-                        println!("start paren!!");
-                        println!(
-                            "in_name: {}, in_data: {},data: \"{}\"",
-                            in_name, in_data, data
-                        );
-
                         return Err(ParseError::InvalidHeaderJson);
                     }
                     in_paren = true;
                     data.push(c);
                 } else if c == ')' {
                     if in_name || !in_data {
-                        println!("end paren!!");
                         return Err(ParseError::InvalidHeaderJson);
                     }
                     in_paren = false;
@@ -226,9 +220,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                 }
             }
         }
-        for (k, v) in items.iter() {
-            println!("({},{})", k, v);
-        }
+
         let shape_tuple_str = items.get("shape");
         if shape_tuple_str.is_none() {
             return Err(ParseError::InvalidHeaderJson);
@@ -239,13 +231,13 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         if !(shape_tuple.len() == 3 || shape_tuple.len() == 4) {
             return Err(ParseError::InvalidHeaderJson);
         }
-        println!("shape: {:#?}", shape_tuple);
+
         let format_str = items.get("descr");
         if format_str.is_none() {
             return Err(ParseError::InvalidHeaderJson);
         }
         let format_str = format_str.unwrap();
-        println!("format: {}", format_str);
+
         if de_quote(format_str)? != "<f4" {
             return Err(ParseError::UnsupportedDatatype(format_str.clone()));
         }
@@ -255,11 +247,6 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
             .iter()
             .map(|_| 1)
             .fold(0, |acc, x| acc + x);
-
-        println!(
-            "predicted size: {}, available bytes: {}, copy buffer size: {}",
-            size, avl_bytes, copy_buffer
-        );
 
         let copy_buffer = &buffer[header_end_idx + 1..buffer.len()];
 
@@ -283,10 +270,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
         if num_channels != T::DIM {
             return Err(ParseError::InvalidHeaderJson);
         }
-        println!(
-            "size_x: {} size_y: {}, num_channels: {}",
-            size_x, size_y, num_channels
-        );
+
         let mut grids: Vec<Grid<T>> = Vec::new();
         grids.reserve(num_layers as usize);
         for layer_num in 0..num_layers {
@@ -308,9 +292,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                 data_vec,
             ));
         }
-        for (idx, c) in dim_str.chars().enumerate() {
-            println!("{}:\t{}", idx + 10, c);
-        }
+
         Ok(grids)
     }
     pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) -> Result<(), ParseError> {

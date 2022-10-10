@@ -1,10 +1,80 @@
+use grid::Grid;
 use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
+use std::fmt::write;
+use std::{fs::File, path::Path};
 
+#[derive(Debug, Clone)]
+pub enum StackError {
+    InvalidDimensions {
+        old_x: u32,
+        new_x: u32,
+        old_y: u32,
+        new_y: u32,
+    },
+}
+impl std::fmt::Display for StackError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::InvalidDimensions {
+                old_x,
+                new_x,
+                old_y,
+                new_y,
+            } => write!(
+                f,
+                "invalid dimensions requested dimensions: ({}, {}) correct dimensions: ({}, {})",
+                old_x, old_y, new_x, new_y
+            ),
+        }
+    }
+}
+impl From<StackError> for PyErr {
+    fn from(err: StackError) -> Self {
+        PyIndexError::new_err(format!("{}", err))
+    }
+}
+#[pyclass(name = "GridStack")]
+struct PyGridLayers {
+    layers: Vec<Grid<f32>>,
+}
+#[pymethods]
+impl PyGridLayers {
+    #[new]
+    fn new() -> PyResult<Self> {
+        Ok(Self { layers: Vec::new() })
+    }
+    fn push_grid(&mut self, grid: PyGrid) -> Result<(), StackError> {
+        let layers_len = self.layers.len();
+        if layers_len > 0 {
+            let size_x = self.layers[0].x();
+            let size_y = self.layers[0].y();
+            if grid.grid.x() != size_x || grid.grid.y() != size_y {
+                return Err(StackError::InvalidDimensions {
+                    old_x: size_x as u32,
+                    old_y: size_y as u32,
+                    new_x: grid.grid.x() as u32,
+                    new_y: grid.grid.y() as u32,
+                });
+            }
+            self.layers.push(grid.grid)
+        }
+        return Err(StackError::InvalidDimensions {
+            old_x: 0,
+            new_x: 0,
+            old_y: 0,
+            new_y: 0,
+        });
+    }
+}
+fn load_stack(p: &str) -> PyResult<PyGridLayers> {
+    todo!()
+}
+#[derive(Clone)]
 #[pyclass(name = "Grid")]
 struct PyGrid {
-    grid: grid::Grid<f32>,
+    grid: Grid<f32>,
 }
 fn py_dict_to_i32x2(py: Python<'_>, tuple: Py<PyTuple>) -> PyResult<(i32, i32)> {
     let tuple_ref = tuple.as_ref(py);
@@ -26,9 +96,10 @@ impl PyGrid {
     #[new]
     fn new(x: usize, y: usize) -> Self {
         Self {
-            grid: grid::Grid::from_fn(|_, _| 0.0, nalgebra::Vector2::new(x, y)),
+            grid: Grid::from_fn(|_, _| 0.0, nalgebra::Vector2::new(x, y)),
         }
     }
+
     fn __getitem__(&self, py: Python<'_>, x: Py<PyTuple>) -> PyResult<f32> {
         let (idx_0, idx_1) = py_dict_to_i32x2(py, x)?;
         if self.in_bounds(idx_0, idx_1) {
@@ -50,6 +121,8 @@ impl PyGrid {
 /// A Python module implemented in Rust.
 #[pymodule]
 fn py_watersim(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(load_stack, m)?)?;
     m.add_class::<PyGrid>()?;
+    m.add_class::<PyGridLayers>()?;
     Ok(())
 }

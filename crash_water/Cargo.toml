@@ -1,14 +1,10 @@
 [package]
-name = "py_watersim"
+name = "crash_water"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[lib]
-name = "py_watersim"
-crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.17.2", features = ["extension-module"] }
-grid = {path = "../grid"}
+water_sim = {path = "../water_sim"}
 nalgebra = "0.29.0"
