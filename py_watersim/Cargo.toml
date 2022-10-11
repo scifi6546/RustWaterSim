@@ -9,4 +9,6 @@ name = "py_watersim"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.17.1", features = ["extension-module"] }
+pyo3 = { version = "0.17.2", features = ["extension-module"] }
+grid = {path = "../grid"}
+nalgebra = "0.29.0"

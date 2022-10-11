@@ -55,20 +55,7 @@ impl Solver for FiniteSolver {
     fn solve(&mut self, boxes: &[AABBBarrier]) -> (&Grid<f32>, Vec<SolveInfo>) {
         self.time_step(boxes);
 
-        (
-            &self.h,
-            vec![], /*
-                    vec![
-                        SolveInfo {
-                            name: "max delta Height",
-                            data: format!("{:.2e}", max_delta),
-                        },
-                        SolveInfo {
-                            name: "Volume",
-                            data: format!("{:.2e}", volume),
-                        },
-                    ],*/
-        )
+        (&self.h, vec![])
     }
     fn water_h(&self) -> &Grid<f32> {
         &self.h

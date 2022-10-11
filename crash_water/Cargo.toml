@@ -1,11 +1,10 @@
 [package]
-name = "grid"
+name = "crash_water"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+water_sim = {path = "../water_sim"}
 nalgebra = "0.29.0"
-zip = "0.6.2"
-thiserror = "1.0.37"

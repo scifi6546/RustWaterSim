@@ -1,5 +1,6 @@
 /// Vector that is writable
 pub trait Vector: Clone {
+    /// how many floats wide a vector is
     const DIM: usize;
     fn to_le_bytes(&self) -> Vec<u8>;
     fn from_le_bytes(bytes: &[u8]) -> Self;
