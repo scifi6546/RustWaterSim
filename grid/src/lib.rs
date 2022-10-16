@@ -8,16 +8,27 @@ use std::{
     fs::File,
     io::{Error as IoError, Read, Seek, Write},
     path::Path,
+    rc::Rc,
     str::{from_utf8, Utf8Error},
 };
 
 pub use debug_buffer::DebugBuffer;
 use thiserror::Error;
 pub use vector::Vector;
-#[derive(Error, Debug)]
-pub enum ParseError {
+#[derive(Error, Debug, Clone)]
+pub enum BoundsCheckError {
+    #[error("Invalid Index")]
+    InvalidIndex {
+        invalid_x: i32,
+        invalid_y: i32,
+        size_x: i32,
+        size_y: i32,
+    },
+}
+#[derive(Error, Debug, Clone)]
+pub enum FileError {
     #[error("IoError")]
-    IoError(#[from] IoError),
+    IoError(Rc<IoError>),
     #[error("Failed to parse")]
     Utf8Error(#[from] Utf8Error),
     #[error("Invalid Header")]
@@ -26,6 +37,11 @@ pub enum ParseError {
     InvalidHeaderJson,
     #[error("Unsupported Datatype: {0}")]
     UnsupportedDatatype(String),
+}
+impl From<std::io::Error> for FileError {
+    fn from(e: IoError) -> Self {
+        Self::IoError(Rc::new(e))
+    }
 }
 use zip::{write::FileOptions as WriterFileOptions, ZipWriter};
 #[derive(Clone)]
@@ -38,21 +54,33 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
     pub fn save_several_layers<P: AsRef<Path>>(
         path: P,
         grid_layers: &[&Grid<T>],
-    ) -> Result<(), ParseError> {
+    ) -> Result<(), FileError> {
         let mut file = File::create(path)?;
         let _ = Self::save_several_layers_writer(&mut file, grid_layers)?;
         Ok(())
+    }
+    pub fn get_checked(&self, x: i32, y: i32) -> Result<T, BoundsCheckError> {
+        if x < 0 || y < 0 || x >= self.x() as i32 || y >= self.y as i32 {
+            return Err(BoundsCheckError::InvalidIndex {
+                invalid_x: x,
+                invalid_y: y,
+                size_x: self.x() as i32,
+                size_y: self.y() as i32,
+            });
+        } else {
+            Ok(self.get(x as usize, y as usize))
+        }
     }
     pub fn save_several_layers_writer<W: Write + Seek>(
         writer: &mut W,
         grid_layers: &[&Grid<T>],
     ) -> std::io::Result<()> {
-        let mut data = Self::make_header([
-            grid_layers.len() as u32,
-            grid_layers[0].x() as u32,
-            grid_layers[0].y() as u32,
-            T::DIM as u32,
-        ]);
+        let (shape_x, shape_y) = match grid_layers.len() {
+            0 => (0, 0),
+            _ => (grid_layers[0].x() as u32, grid_layers[0].y() as u32),
+        };
+        let mut data =
+            Self::make_header([grid_layers.len() as u32, shape_x, shape_y, T::DIM as u32]);
         for layer in grid_layers {
             for x in 0..layer.x() {
                 for y in 0..layer.y() {
@@ -75,21 +103,21 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
 
         Ok(())
     }
-    pub fn load_layers<P: AsRef<Path>>(path: P) -> Result<Vec<Self>, ParseError> {
+    pub fn load_layers<P: AsRef<Path>>(path: P) -> Result<Vec<Self>, FileError> {
         let mut f = File::open(path)?;
         Self::load_layers_reader(&mut f)
     }
     /// loads several layers saved as numpy array
-    pub fn load_layers_reader<R: Read>(reader: &mut R) -> Result<Vec<Self>, ParseError> {
-        fn de_quote(s: &str) -> Result<&str, ParseError> {
+    pub fn load_layers_reader<R: Read>(reader: &mut R) -> Result<Vec<Self>, FileError> {
+        fn de_quote(s: &str) -> Result<&str, FileError> {
             let s = s.trim();
             let start_char = s.chars().next();
             if start_char.is_none() {
-                return Err(ParseError::InvalidHeaderJson);
+                return Err(FileError::InvalidHeaderJson);
             }
             Ok(s.trim_matches(|c| c == '"' || c == '\''))
         }
-        fn parse_tuple(tuple_str: &str) -> Result<Vec<u32>, ParseError> {
+        fn parse_tuple(tuple_str: &str) -> Result<Vec<u32>, FileError> {
             let tuple_str = tuple_str.trim();
             let mut is_first_char = true;
             let mut current_num = 0u32;
@@ -98,7 +126,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
             for c in tuple_str.chars() {
                 if is_first_char {
                     if c != '(' {
-                        return Err(ParseError::InvalidHeaderJson);
+                        return Err(FileError::InvalidHeaderJson);
                     }
                     in_beginning_of_num = true;
                 } else {
@@ -124,31 +152,31 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                         in_beginning_of_num = false;
                     } else if c.is_whitespace() {
                         if !in_beginning_of_num {
-                            return Err(ParseError::InvalidHeaderJson);
+                            return Err(FileError::InvalidHeaderJson);
                         }
                     } else if c == ')' {
                         if in_beginning_of_num {
-                            return Err(ParseError::InvalidHeaderJson);
+                            return Err(FileError::InvalidHeaderJson);
                         }
                         out_vec.push(current_num);
                         return Ok(out_vec);
                     } else {
-                        return Err(ParseError::InvalidHeaderJson);
+                        return Err(FileError::InvalidHeaderJson);
                     }
                 }
                 is_first_char = false;
             }
-            return Err(ParseError::InvalidHeaderJson);
+            return Err(FileError::InvalidHeaderJson);
         }
 
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer)?;
         let numpy_str = from_utf8(&buffer[1..6])?;
         if numpy_str != "NUMPY" {
-            return Err(ParseError::InvalidHeader);
+            return Err(FileError::InvalidHeader);
         }
         if buffer[10] != '{' as u8 {
-            return Err(ParseError::InvalidHeader);
+            return Err(FileError::InvalidHeader);
         }
         let header_start_offset = 11;
         let header_end_idx = buffer[11..]
@@ -158,7 +186,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
             .map(|(idx, _byte)| idx + header_start_offset)
             .next();
         if header_end_idx.is_none() {
-            return Err(ParseError::InvalidHeader);
+            return Err(FileError::InvalidHeader);
         }
         let header_end_idx = header_end_idx.unwrap();
 
@@ -183,11 +211,11 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                         data.push(c);
                     }
                     if !in_name && !in_data {
-                        return Err(ParseError::InvalidHeaderJson);
+                        return Err(FileError::InvalidHeaderJson);
                     }
                 } else if c == ':' && !in_str {
                     if in_paren {
-                        return Err(ParseError::InvalidHeaderJson);
+                        return Err(FileError::InvalidHeaderJson);
                     }
                     in_name = false;
                     in_data = true;
@@ -202,13 +230,13 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                     data.clear();
                 } else if c == '(' {
                     if in_name || !in_data || data.trim() != "" {
-                        return Err(ParseError::InvalidHeaderJson);
+                        return Err(FileError::InvalidHeaderJson);
                     }
                     in_paren = true;
                     data.push(c);
                 } else if c == ')' {
                     if in_name || !in_data {
-                        return Err(ParseError::InvalidHeaderJson);
+                        return Err(FileError::InvalidHeaderJson);
                     }
                     in_paren = false;
                     data.push(c);
@@ -225,23 +253,23 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
 
         let shape_tuple_str = items.get("shape");
         if shape_tuple_str.is_none() {
-            return Err(ParseError::InvalidHeaderJson);
+            return Err(FileError::InvalidHeaderJson);
         }
         let shape_tuple_str = shape_tuple_str.unwrap();
 
         let shape_tuple = parse_tuple(&shape_tuple_str)?;
         if !(shape_tuple.len() == 3 || shape_tuple.len() == 4) {
-            return Err(ParseError::InvalidHeaderJson);
+            return Err(FileError::InvalidHeaderJson);
         }
 
         let format_str = items.get("descr");
         if format_str.is_none() {
-            return Err(ParseError::InvalidHeaderJson);
+            return Err(FileError::InvalidHeaderJson);
         }
         let format_str = format_str.unwrap();
 
         if de_quote(format_str)? != "<f4" {
-            return Err(ParseError::UnsupportedDatatype(format_str.clone()));
+            return Err(FileError::UnsupportedDatatype(format_str.clone()));
         }
         let size = std::mem::size_of::<f32>() as u32 * shape_tuple.iter().fold(1, |acc, x| acc * x);
         let avl_bytes = buffer.len() - header_end_idx;
@@ -267,10 +295,10 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                 shape_tuple[2] as usize,
             )
         } else {
-            return Err(ParseError::InvalidHeaderJson);
+            return Err(FileError::InvalidHeaderJson);
         };
         if num_channels != T::DIM {
-            return Err(ParseError::InvalidHeaderJson);
+            return Err(FileError::InvalidHeaderJson);
         }
 
         let mut grids: Vec<Grid<T>> = Vec::new();
@@ -297,7 +325,7 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
 
         Ok(grids)
     }
-    pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) -> Result<(), ParseError> {
+    pub fn debug_save<P: AsRef<Path>>(&self, save_path: P) -> Result<(), FileError> {
         let data = self.numpy_data();
         let mut file = File::create(save_path).expect("failed to open file");
         file.write(&data)?;

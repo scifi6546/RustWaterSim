@@ -1,9 +1,9 @@
-use grid::Grid;
+use grid::{FileError, Grid};
 use pyo3::exceptions::PyIndexError;
 use pyo3::prelude::*;
-use pyo3::types::PyTuple;
-use std::fmt::write;
-use std::{fs::File, path::Path};
+use pyo3::types::{PyInt, PyTuple};
+
+use std::path::Path;
 
 #[derive(Debug, Clone)]
 pub enum StackError {
@@ -13,6 +13,7 @@ pub enum StackError {
         old_y: u32,
         new_y: u32,
     },
+    LoadError(FileError),
 }
 impl std::fmt::Display for StackError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -27,9 +28,16 @@ impl std::fmt::Display for StackError {
                 "invalid dimensions requested dimensions: ({}, {}) correct dimensions: ({}, {})",
                 old_x, old_y, new_x, new_y
             ),
+            Self::LoadError(e) => write!(f, "{:?}", e),
         }
     }
 }
+impl From<FileError> for StackError {
+    fn from(e: FileError) -> Self {
+        Self::LoadError(e)
+    }
+}
+
 impl From<StackError> for PyErr {
     fn from(err: StackError) -> Self {
         PyIndexError::new_err(format!("{}", err))
@@ -39,6 +47,7 @@ impl From<StackError> for PyErr {
 struct PyGridLayers {
     layers: Vec<Grid<f32>>,
 }
+
 #[pymethods]
 impl PyGridLayers {
     #[new]
@@ -62,16 +71,50 @@ impl PyGridLayers {
         }
         Ok(())
     }
+    fn save(&mut self, path: &str) -> PyResult<()> {
+        let layers = self.layers.iter().collect::<Vec<_>>();
+        Grid::save_several_layers(path, &layers).map_err(|e| StackError::LoadError(e))?;
+        Ok(())
+    }
+    fn __getitem__(&self, py: Python<'_>, x: Py<PyTuple>) -> PyResult<Py<PyAny>> {
+        let idx = py_dict_to_i32_vec(py, x)?;
+
+        match idx.len() {
+            1 => {
+                if idx[0] < self.layers.len() as i32 && idx[0] >= 0 {
+                    Ok(PyGrid {
+                        grid: self.layers[idx[0] as usize].clone(),
+                    }
+                    .into_py(py))
+                } else {
+                    Err(PyIndexError::new_err("invalid tuple length"))
+                }
+            }
+            2 => todo!("return row"),
+            3 => todo!("get idx"),
+            _ => todo!("error handlng"),
+        }
+    }
 }
 #[pyfunction]
 fn load_stack(p: &str) -> PyResult<PyGridLayers> {
-    let layers = Grid::load_layers(Path::new(p))?;
+    let layers = Grid::load_layers(Path::new(p)).map_err(|e| StackError::LoadError(e))?;
     Ok(PyGridLayers { layers })
 }
 #[derive(Clone)]
 #[pyclass(name = "Grid")]
 struct PyGrid {
     grid: Grid<f32>,
+}
+fn py_dict_to_i32_vec(py: Python<'_>, tuple: Py<PyTuple>) -> PyResult<Vec<i32>> {
+    let tuple_ref = tuple.as_ref(py);
+    let len = tuple_ref.len();
+    let mut out = vec![];
+    for i in 0..len {
+        let push: i32 = tuple_ref.get_item(i)?.extract()?;
+        out.push(push);
+    }
+    Ok(out)
 }
 fn py_dict_to_i32x2(py: Python<'_>, tuple: Py<PyTuple>) -> PyResult<(i32, i32)> {
     let tuple_ref = tuple.as_ref(py);

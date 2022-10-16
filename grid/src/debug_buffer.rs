@@ -1,4 +1,4 @@
-use super::{Grid, ParseError, Vector};
+use super::{FileError, Grid, Vector};
 use std::path::Path;
 pub struct DebugBuffer<T: Copy + Clone + Vector + Default> {
     items: Vec<Grid<T>>,
@@ -28,7 +28,7 @@ impl<T: Copy + Clone + Vector + Default> DebugBuffer<T> {
             );
         }
     }
-    pub fn save<P: AsRef<Path>>(&self, save_path: P) -> Result<(), ParseError> {
+    pub fn save<P: AsRef<Path>>(&self, save_path: P) -> Result<(), FileError> {
         let mut save_vec = vec![&self.items[self.current_idx as usize]];
         let mut idx = (self.current_idx + 1) % self.buffer_size;
         loop {
