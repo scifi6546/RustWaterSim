@@ -91,7 +91,6 @@ impl<T: Clone + Copy + Default + Vector> Grid<T> {
                 }
             }
         }
-        let s = writer.write(&data)?;
         let mut zip_writer = ZipWriter::new(writer);
         let options =
             WriterFileOptions::default().compression_method(zip::CompressionMethod::Stored);

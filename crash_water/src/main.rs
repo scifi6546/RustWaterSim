@@ -20,7 +20,7 @@ fn main() {
     );
 
     let mut solver = PreferredSolver::new(h, g_h, Vec::new(), SolverBoundaryConditions::default());
-    for i in 0..100 {
+    for i in 0..1000 {
         println!("{}", i);
         solver.solve(&[]);
     }
