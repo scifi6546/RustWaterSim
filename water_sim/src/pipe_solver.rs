@@ -132,24 +132,29 @@ impl PipeSolver {
             println!("saving ground");
             let ground_name = format!("ground_{}.npz", self.t);
             self.ground_debug_buffer
-                .save(save_dir.as_path().join(&ground_name));
+                .save(save_dir.as_path().join(&ground_name))
+                .expect("failed to save");
             let dimensions = Vector2::new(self.dim_x(), self.dim_y());
             let slope = Grid::from_fn(|x, y| Self::get_slope(&self.ground, x, y), dimensions);
 
             let velocity_name = format!("velocity_{}.npz", self.t);
             self.velocity_debug_buffer
-                .save(save_dir.join(&velocity_name));
+                .save(save_dir.join(&velocity_name))
+                .expect("failed to save");
 
             //let slope_name = format!("slope_{}.np", self.t);
             //slope.debug_save(save_dir.join(&slope_name));
 
             let water_name = format!("water_{}.npz", self.t);
-            self.water_debug_buffer.save(save_dir.join(water_name));
+            self.water_debug_buffer
+                .save(save_dir.join(water_name))
+                .expect("failed to save");
 
             let dissolve_name = format!("dissolved_{}.npz", self.t);
 
             self.dissolved_ground_debug_buffer
-                .save(save_dir.join(dissolve_name));
+                .save(save_dir.join(dissolve_name))
+                .expect("failed to save");
         }
     }
     fn get_slope(g: &Grid<f32>, x: usize, y: usize) -> f32 {
@@ -165,41 +170,62 @@ impl PipeSolver {
     }
     fn solve_erode(&mut self) {
         const GROUND_DELTA_T: f32 = 0.5;
-        let softness = 0.1;
+        let softness = 0.00001;
         let dim_x = self.water.x();
         let dim_y = self.water.y();
+
         let mut water_new = self.water.clone();
 
         for x in 0..dim_x {
             for y in 0..dim_y {
-                let pipe = self.velocity.get(x, y);
+                let v_out = self.velocity.get(x, y);
+                let v_out = [v_out.l, v_out.d, v_out.r, v_out.u];
+                let v_in = [
+                    self.velocity.get(x.max(1) - 1, y).r,
+                    self.velocity.get((x + 1).min(dim_x - 1), y).l,
+                    self.velocity.get(x, y.max(1) - 1).u,
+                    self.velocity.get(x, (y + 1).min(dim_y - 1)).d,
+                ];
 
-                let v = Self::get_velocity(&pipe).magnitude();
+                let v = v_out.iter().fold(0.0, |acc, x| acc + x.abs())
+                    + v_in.iter().fold(0.0, |acc, x| acc + x.abs());
                 // max concentration to take
                 let cap = (softness * v).min(0.01) * Self::get_slope(&self.ground, x, y);
+                let cap = (softness * v).max(0.01).min(0.1) * self.water.get(x, y);
+                //let cap = 0.00001;
                 let to_take =
                     (cap - self.dissolved_ground.get(x, y)) * Self::DELTA_T * GROUND_DELTA_T;
                 *self.ground.get_mut(x, y) -= to_take;
                 *self.dissolved_ground.get_mut(x, y) += to_take;
-                *water_new.get_mut(x, y) += to_take;
+                //*water_new.get_mut(x, y) += to_take;
             }
         }
         self.water = water_new;
         let mut new_dissoved_g = self.dissolved_ground.clone();
+
         let mut water_new = self.water.clone();
-        for x in 1..dim_x - 1 {
-            for y in 1..dim_y - 1 {
-                let d_xm1y0 = self.dissolved_ground.get(x - 1, y) * self.water.get(x - 1, y);
-                let d_xp1y0 = self.dissolved_ground.get(x + 1, y) * self.water.get(x + 1, y);
+
+        for x in 0..dim_x {
+            for y in 0..dim_y {
+                let d_xm1y0 = match x {
+                    0 => 0.0,
+                    _ => self.dissolved_ground.get(x - 1, y) * self.water.get(x - 1, y),
+                };
+                let max_x = dim_x - 1;
+                let d_xp1y0 = match x {
+                    max_x => 0.0,
+                    _ => self.dissolved_ground.get(x + 1, y) * self.water.get(x + 1, y),
+                };
+
                 let d_x0ym1 = self.dissolved_ground.get(x, y - 1) * self.water.get(x, y - 1);
                 let d_x0yp1 = self.dissolved_ground.get(x, y + 1) * self.water.get(x, y + 1);
 
                 let d_x0y0 = self.dissolved_ground.get(x, y) * self.water.get(x, y);
 
-                let v_xm1y0 = self.velocity.get(x - 1, y);
-                let v_xp1y0 = self.velocity.get(x + 1, y);
-                let v_x0ym1 = self.velocity.get(x, y - 1);
-                let v_x0yp1 = self.velocity.get(x, y + 1);
+                let v_xm1y0 = self.velocity.get(x - 1, y).r;
+                let v_xp1y0 = self.velocity.get(x + 1, y).l;
+                let v_x0ym1 = self.velocity.get(x, y - 1).u;
+                let v_x0yp1 = self.velocity.get(x, y + 1).d;
 
                 let v_x0y0 = self.velocity.get(x, y);
 
@@ -212,16 +238,17 @@ impl PipeSolver {
                         + v_x0y0.u * Self::L_Y);
                 let ground_in = Self::DELTA_T
                     * GROUND_DELTA_T
-                    * (v_xm1y0.r * d_xm1y0 * Self::L_X
-                        + v_xp1y0.l * d_xp1y0 * Self::L_X
-                        + v_x0ym1.u * d_x0ym1 * Self::L_Y
-                        + v_x0yp1.d * d_x0yp1 * Self::L_Y);
+                    * (v_xm1y0 * d_xm1y0 * Self::L_X
+                        + v_xp1y0 * d_xp1y0 * Self::L_X
+                        + v_x0ym1 * d_x0ym1 * Self::L_Y
+                        + v_x0yp1 * d_x0yp1 * Self::L_Y);
                 let delta = ground_in - ground_out;
                 *new_dissoved_g.get_mut(x, y) += delta;
                 *water_new.get_mut(x, y) -= delta;
             }
         }
         self.dissolved_ground = new_dissoved_g;
+
         self.water = water_new;
     }
     fn kernel(
