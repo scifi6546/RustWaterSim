@@ -5,7 +5,14 @@ use super::{
 use bevy::prelude::Component;
 use grid::DebugBuffer;
 use nalgebra::Vector2;
-
+use std::ops::Neg;
+/// bounds x by negative and positive version of value
+/// for example, max_min(1.0,3.0) -> 1.0
+/// max_min(4.0,3.0)->3.0
+/// max_min(-5.0,3.0)->-3.0
+fn max_min(x: f32, bounds: f32) -> f32 {
+    x.min(bounds.abs()).max(bounds.abs().neg())
+}
 /// used https://github.com/bshishov/UnityTerrainErosionGPU as reference
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -15,6 +22,7 @@ struct Pipes {
     u: f32,
     d: f32,
 }
+
 impl Default for Pipes {
     fn default() -> Self {
         Pipes {
@@ -25,6 +33,7 @@ impl Default for Pipes {
         }
     }
 }
+
 impl Vector for Pipes {
     const DIM: usize = 1;
 
@@ -79,7 +88,7 @@ impl Solver for PipeSolver {
         self.solve_pipe();
         self.solve_erode();
 
-        self.debug_save();
+        // self.debug_save();
         (&self.water, vec![])
     }
 
@@ -158,74 +167,156 @@ impl PipeSolver {
         }
     }
     fn get_slope(g: &Grid<f32>, x: usize, y: usize) -> f32 {
+        fn abs_max(a: f32, b: f32) -> f32 {
+            if a.abs() >= b.abs() {
+                a
+            } else {
+                b
+            }
+        }
         let height = g.get(x, y);
-        (height - g.get_or(x as i32 - 1, y as i32, height))
-            .abs()
-            .max((height - g.get_or(x as i32 + 1, y as i32, height)).abs())
-            .max((height - g.get_or(x as i32, y as i32 - 1, height)).abs())
-            .max((height - g.get_or(x as i32, y as i32 + 1, height)).abs())
+
+        abs_max(
+            (height - g.get_or(x as i32 - 1, y as i32, height)),
+            (height - g.get_or(x as i32 + 1, y as i32, height)),
+        );
+        [
+            (height - g.get_or(x as i32 - 1, y as i32, height)),
+            (height - g.get_or(x as i32 + 1, y as i32, height)),
+            (height - g.get_or(x as i32, y as i32 - 1, height)),
+            (height - g.get_or(x as i32, y as i32 + 1, height)),
+        ]
+        .iter()
+        .fold(0.0, |acc, x| abs_max(acc, *x))
     }
     fn get_w_g_h(&self, x: usize, y: usize) -> f32 {
         self.water.get(x, y) + self.get_g_h(x, y)
     }
     fn solve_erode(&mut self) {
         const GROUND_DELTA_T: f32 = 0.5;
-        let softness = 0.00001;
+        let softness = 1.0;
         let dim_x = self.water.x();
         let dim_y = self.water.y();
 
         let mut water_new = self.water.clone();
-
+        let mut new_ground = self.ground.clone();
+        let mut new_dissolved = self.dissolved_ground.clone();
         for x in 0..dim_x {
             for y in 0..dim_y {
                 let v_out = self.velocity.get(x, y);
                 let v_out = [v_out.l, v_out.d, v_out.r, v_out.u];
-                let v_in = [
-                    self.velocity.get(x.max(1) - 1, y).r,
-                    self.velocity.get((x + 1).min(dim_x - 1), y).l,
-                    self.velocity.get(x, y.max(1) - 1).u,
-                    self.velocity.get(x, (y + 1).min(dim_y - 1)).d,
-                ];
 
-                let v = v_out.iter().fold(0.0, |acc, x| acc + x.abs())
-                    + v_in.iter().fold(0.0, |acc, x| acc + x.abs());
+                let v_in = [
+                    if x == 0 {
+                        0.0
+                    } else {
+                        self.velocity.get(x - 1, y).r
+                    },
+                    if x == dim_x - 1 {
+                        0.0
+                    } else {
+                        self.velocity.get(x + 1, y).r
+                    },
+                    if y == 0 {
+                        0.0
+                    } else {
+                        self.velocity.get(x, y - 1).u
+                    },
+                    if y == dim_y - 1 {
+                        0.0
+                    } else {
+                        self.velocity.get(x, y + 1).d
+                    },
+                ];
+                let v = v_out.iter().fold(0.0, |acc, x| acc + x)
+                    + v_in.iter().fold(0.0, |acc, x| acc + x);
                 // max concentration to take
                 let cap = (softness * v).min(0.01) * Self::get_slope(&self.ground, x, y);
-                let cap = (softness * v).max(0.01).min(0.1) * self.water.get(x, y);
+                let cap = (v.max(0.0).atan() * self.water.get(x, y)).max(0.0)
+                    * Self::get_slope(&self.ground, x, y);
                 //let cap = 0.00001;
-                let to_take =
-                    (cap - self.dissolved_ground.get(x, y)) * Self::DELTA_T * GROUND_DELTA_T;
-                *self.ground.get_mut(x, y) -= to_take;
-                *self.dissolved_ground.get_mut(x, y) += to_take;
-                //*water_new.get_mut(x, y) += to_take;
+                let to_take = (cap - self.dissolved_ground.get(x, y))
+                    * Self::DELTA_T
+                    * GROUND_DELTA_T
+                    * softness;
+
+                //let to_take = to_take.max(-self.water.get(x, y));
+                //let to_take = to_take.max(-self.dissolved_ground.get(x, y));
+                *new_ground.get_mut(x, y) -= to_take;
+                *new_dissolved.get_mut(x, y) += to_take;
+                *water_new.get_mut(x, y) += to_take;
             }
         }
+        self.ground = new_ground;
+        self.dissolved_ground = new_dissolved;
         self.water = water_new;
+        let max_move = Grid::from_fn(
+            |x, y| {
+                let velocity = self.velocity.get(x, y);
+                let water = self.water.get(x, y);
+                let velocity_sum = velocity.r + velocity.l + velocity.u + velocity.d;
+                if velocity_sum >= water {
+                    Pipes {
+                        l: water * velocity.l / velocity_sum,
+                        r: water * velocity.r / velocity_sum,
+                        u: water * velocity.u / velocity_sum,
+                        d: water * velocity.d / velocity_sum,
+                    }
+                } else {
+                    velocity
+                }
+            },
+            Vector2::new(self.velocity.x(), self.velocity.y()),
+        );
         let mut new_dissoved_g = self.dissolved_ground.clone();
 
         let mut water_new = self.water.clone();
 
         for x in 0..dim_x {
             for y in 0..dim_y {
-                let d_xm1y0 = match x {
-                    0 => 0.0,
-                    _ => self.dissolved_ground.get(x - 1, y) * self.water.get(x - 1, y),
+                let d_xm1y0 = if x == 0 {
+                    0.0
+                } else {
+                    self.dissolved_ground.get(x - 1, y)
                 };
-                let max_x = dim_x - 1;
-                let d_xp1y0 = match x {
-                    max_x => 0.0,
-                    _ => self.dissolved_ground.get(x + 1, y) * self.water.get(x + 1, y),
+                let d_xp1y0 = if x == dim_x - 1 {
+                    0.0
+                } else {
+                    self.dissolved_ground.get(x + 1, y)
+                };
+                let d_x0ym1 = if y == 0 {
+                    0.0
+                } else {
+                    self.dissolved_ground.get(x, y - 1)
                 };
 
-                let d_x0ym1 = self.dissolved_ground.get(x, y - 1) * self.water.get(x, y - 1);
-                let d_x0yp1 = self.dissolved_ground.get(x, y + 1) * self.water.get(x, y + 1);
+                let d_x0yp1 = if y == dim_y - 1 {
+                    0.0
+                } else {
+                    self.dissolved_ground.get(x, y + 1)
+                };
 
-                let d_x0y0 = self.dissolved_ground.get(x, y) * self.water.get(x, y);
-
-                let v_xm1y0 = self.velocity.get(x - 1, y).r;
-                let v_xp1y0 = self.velocity.get(x + 1, y).l;
-                let v_x0ym1 = self.velocity.get(x, y - 1).u;
-                let v_x0yp1 = self.velocity.get(x, y + 1).d;
+                let d_x0y0 = self.dissolved_ground.get(x, y);
+                let v_xm1y0 = if x == 0 {
+                    0.0
+                } else {
+                    max_min(self.velocity.get(x - 1, y).r, max_move.get(x - 1, y).r)
+                };
+                let v_xp1y0 = if x == dim_x - 1 {
+                    0.0
+                } else {
+                    max_min(self.velocity.get(x + 1, y).l, max_move.get(x + 1, y).l)
+                };
+                let v_x0ym1 = if y == 0 {
+                    0.0
+                } else {
+                    max_min(self.velocity.get(x, y - 1).u, max_move.get(x, y - 1).u)
+                };
+                let v_x0yp1 = if y == dim_y - 1 {
+                    0.0
+                } else {
+                    max_min(self.velocity.get(x, y + 1).d, max_move.get(x, y + 1).d)
+                };
 
                 let v_x0y0 = self.velocity.get(x, y);
 
@@ -244,7 +335,7 @@ impl PipeSolver {
                         + v_x0yp1 * d_x0yp1 * Self::L_Y);
                 let delta = ground_in - ground_out;
                 *new_dissoved_g.get_mut(x, y) += delta;
-                *water_new.get_mut(x, y) -= delta;
+                *water_new.get_mut(x, y) += delta;
             }
         }
         self.dissolved_ground = new_dissoved_g;
@@ -253,9 +344,7 @@ impl PipeSolver {
     }
     fn kernel(
         f_x0y0: Pipes,
-
         w_x0y0: f32,
-
         wg_x0y0: f32,
         wg_xm1y0: f32,
         wg_xp1y0: f32,
@@ -678,5 +767,13 @@ impl PipeSolver {
         }
 
         self.t += 1;
+    }
+}
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn min_max() {
+        assert!((max_min(1.0, 2.0) - 1.0).abs() < 0.01)
     }
 }

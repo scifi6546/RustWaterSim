@@ -61,6 +61,7 @@ pub enum GameState {
     /// During this state a player is competing to finish a puzzle
     Mission,
     // Here the menu is drawn and waiting for player interaction
+    City,
     Menu,
     Page,
 }

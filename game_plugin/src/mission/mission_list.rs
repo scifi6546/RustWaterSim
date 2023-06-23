@@ -40,7 +40,7 @@ impl MissionScenario for TsunamiScenario {
                 Grid::from_fn(
                     |x, y| {
                         if x < 100 {
-                            20.0
+                            ocean_level + 12.0
                         } else {
                             (ocean_level - ground(x, y)).max(0.0)
                         }
